@@ -1,0 +1,39 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Local runtime and user data
+.runtime/
+data/
+evidence/
+reports/
+Real_Pack_Test/
+*.sqlite3
+*.sqlite3-*
+*.xlsx
+*.xls
+*.lnk
+pack-qa-*.json
+
+# Environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Web dependencies and generated output
+web/node_modules/
+web/.next/
+web/.vinext/
+web/dist/
+web/out/
+web/.wrangler/
+web/outputs/
+web/work/
+web/tsconfig.tsbuildinfo
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

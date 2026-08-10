@@ -1,0 +1,11 @@
+failures:
+  - bundle_id: 114434
+    rule_id: ITEM_AMOUNT_WEBSITE
+    field: "website.items[].amount[item_id=AURA-BLACK]"
+    source: website
+    expected: 3
+    actual: 2
+    status: FAIL
+    severity: HIGH
+
+normal_bundle_ids: [114432, 114433, 114435, 114436, 114437, 114438]

@@ -1,0 +1,35 @@
+# Regression for the lost source file: Website says x49 while the seed point,
+# and therefore the required GSP earn, is x490.
+dataset: "GSP x49 synthetic regression"
+
+bundles:
+  - bundle_id: 990049
+    spec:
+      name: "GSP 490 Pack"
+      seed_point: 490
+      gsp_earn: 490
+      purchase_limit: 1
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+      reset_type: none
+      items:
+        - {item_id: GSP-ITEM, name: "Regression Item", amount: 1}
+    admin:
+      name: "GSP 490 Pack"
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+    website:
+      seed_point:
+        value: 490
+        raw_text: "x490"
+        locator: "synthetic website seed point"
+      gsp_earn:
+        value: 49
+        raw_text: "x49"
+        locator: "synthetic website GSP earn"
+      purchase_limit: 1
+      items:
+        - {item_id: GSP-ITEM, name: "Regression Item", amount: 1}
+    receipt:
+      items:
+        - {item_id: GSP-ITEM}

@@ -1,0 +1,146 @@
+# ══════════════════════════════════════════════════════════════════
+# Pack QA — Rule specification
+# ══════════════════════════════════════════════════════════════════
+# rule เขียนแบบ declarative (data ไม่ใช่โค้ด) เพราะ:
+#   - เพิ่ม/แก้ rule ได้โดยไม่แตะ engine
+#   - คน QA อ่านรู้เรื่อง ไม่ต้องอ่าน Python
+#   - เป็น "สัญญา" ตรงกับ .expected.yaml ใน golden dataset
+#
+# 2 รูปทรงของ rule ที่เจอจากบั๊กจริง:
+#   A) cross-source : เทียบ field เดียวกันข้าม source   (เช่น Aura Black spec≠website)
+#   B) invariant    : เทียบ field กันเองใน source เดียว  (เช่น gsp = seed_point)
+#
+# status ที่ engine ออกได้:
+#   PASS         ค่าตรง
+#   FAIL         ค่าไม่ตรง และทั้งสองฝั่ง verifiable
+#   WARN         ต่างแต่ในเกณฑ์ยอมรับ (เช่น ราคาปัดเศษ)
+#   UNVERIFIABLE ฝั่งใดฝั่งหนึ่งอ่านไม่ออก (confidence 0) — ห้ามนับเป็น FAIL
+# ══════════════════════════════════════════════════════════════════
+
+meta:
+  version: 1
+  checklist_ref: "TOSM pack QA — 10 points"
+
+# ─── กติกาการเทียบ ที่ engine ต้องรู้ก่อนตรวจ ───
+matching:
+  pack_key: bundle_id          # จับคู่ pack ข้าม source ด้วย bundle_id ไม่ใช่ชื่อ
+  item_key: item_id            # จับคู่ item ด้วย id ไม่ใช่ชื่อ (กันชื่อไทย/อังกฤษไม่ตรง)
+
+# ─── cell ที่ต้องข้าม (annotation ของคน ไม่ใช่ข้อมูล) ───
+# มาจากเคสจริง: cell "เดิมมี God Coin 2" เกือบทำ engine รายงาน FAIL ปลอม
+ignore_patterns:
+  - "^เดิมมี"
+
+# ─── normalize ก่อนเทียบ ที่ที่บั๊กจริงชอบซ่อน ───
+normalize:
+  strip_multiplier: true       # "x490" / "490x" → 490  (เคส GSP x49)
+  trim_whitespace: true
+  date_formats: ["%d %b", "%d/%m/%Y", "%Y-%m-%d"]
+
+# ══════════════════════════════════════════════════════════════════
+# RULES
+# ══════════════════════════════════════════════════════════════════
+rules:
+
+  - id: PACK_NAME_WEBSITE
+    check: 2
+    kind: cross_source
+    desc: "Website pack name must match Spec"
+    compare: { left: spec.name, right: website.name }
+    severity: HIGH
+
+  - id: SEED_POINT_WEBSITE
+    check: 3
+    kind: cross_source
+    desc: "Website Seed Point price must match Spec"
+    compare: { left: spec.seed_point, right: website.seed_point }
+    severity: HIGH
+
+  # ── ชนิด A: cross-source ─────────────────────────────────────────
+
+  - id: ITEM_AMOUNT_WEBSITE
+    check: 9
+    kind: cross_source
+    desc: "จำนวนไอเทมบนเว็บต้องตรงกับ Spec"     # ← เคส Aura Black 3 vs 2
+    compare:
+      left: spec.items[].amount
+      right: website.items[].amount
+      join_on: item_id
+    severity: HIGH
+
+  - id: ITEM_CHANCE_WEBSITE
+    check: 8
+    kind: cross_source
+    when: is_gacha
+    desc: "โอกาสของแต่ละ outcome บน Website ต้องตรงกับ Spec"
+    compare:
+      left: gacha.items[].chance
+      right: website.items[].chance
+      join_on: item_id
+    severity: HIGH
+
+  - id: PACK_NAME_ADMIN
+    check: 1
+    kind: cross_source
+    desc: "ชื่อ pack ใน Admin ต้องตรง Spec"      # ← เคสก๊อบชื่อผิด
+    compare: { left: spec.name, right: admin.name }
+    severity: LOW
+
+  - id: DATE_ADMIN
+    check: 4
+    kind: cross_source
+    desc: "วันเริ่มใน Admin ต้องตรง Spec"
+    compare: { left: spec.start_date, right: admin.start_date }
+    severity: MEDIUM
+
+  - id: DATE_ADMIN
+    check: 4
+    kind: cross_source
+    when: not_permanent
+    desc: "วันจบใน Admin ต้องตรง Spec"
+    compare: { left: spec.end_date, right: admin.end_date }
+    severity: MEDIUM
+
+  - id: PERMANENT_ADMIN
+    check: 4
+    kind: cross_source
+    when: is_permanent
+    desc: "แพ็กถาวรใน Admin ต้องตั้งช่วงเวลาระยะยาว"
+    compare: { left: spec.is_permanent, right: admin.is_permanent }
+    severity: MEDIUM
+
+  - id: PURCHASE_LIMIT_WEBSITE
+    check: 5
+    kind: cross_source
+    desc: "limit ต่อ ID บนเว็บต้องตรง Spec"       # ← เคส limit ผิด
+    compare: { left: spec.purchase_limit, right: website.purchase_limit }
+    severity: HIGH
+
+  - id: ITEM_DELIVERED_RECEIPT
+    check: 10
+    kind: presence                                # ไม่เทียบจำนวน แค่ "มีของครบมั้ย"
+    optional: true
+    desc: "ของทุกชิ้นใน Spec ต้องโผล่ใน Receipt"  # ← จับ item type ผิด (ของหายทั้งชิ้น)
+    compare:
+      left: spec.items[].item_id
+      right: receipt.items[].item_id
+      assert: right_contains_all_left
+    severity: HIGH
+
+  # ── ชนิด B: invariant (เทียบกันเองใน source) ────────────────────
+
+  - id: GSP_EQ_SEED
+    check: 6
+    kind: invariant
+    desc: "GSP earn ต้องเท่ากับ seed point"        # ← เคส GSP x49 (ควรเป็น x490)
+    assert: "website.gsp_earn == website.seed_point"
+    severity: HIGH
+
+  - id: GACHA_CHANCE_SUM
+    check: 8
+    kind: invariant
+    when: is_gacha
+    desc: "ผลรวม % ของ gacha ต้อง = 100"
+    assert: "sum(gacha.items[].chance) == 100.0"
+    tolerance: 0.01
+    severity: HIGH
