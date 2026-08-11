@@ -493,20 +493,20 @@
 
     <section class="slide">
       <div class="topline"></div>
-      <div class="eyebrow">Why this matters</div>
-      <h2>จุดผิดเล็ก ๆ อาจเป็นปัญหาที่ผู้เล่นเจอจริง</h2>
+      <div class="eyebrow">Pain points</div>
+      <h2>ข้อมูลกระจาย งานซ้ำ และย้อนเหตุผลที่ตัดสินได้ยาก</h2>
       <div class="split wide-left" style="margin-top:44px">
-        <div class="statement">วันนี้ข้อมูลเดียวกันกระจายอยู่หลายแหล่ง และคนตรวจต้องจำเองว่าอะไรควรตรงกับอะไร</div>
+        <div class="statement">คนตรวจต้องแปลงข้อมูล จับคู่รายการ และประเมินความน่าเชื่อถือเองใหม่ทุกครั้ง</div>
         <div>
           <div class="big-number">4</div>
-          <div class="metric-label">แหล่งหลักที่ต้องดูร่วมกันก่อนส่งอนุมัติ</div>
+          <div class="metric-label">Pain point ที่ต้องแก้ ก่อนจะลดเวลาตรวจได้จริง</div>
         </div>
       </div>
       <div class="source-list" style="margin-top:38px">
-        <div class="source-line"><span class="num">01</span><b>Req / Spec</b><span>สิ่งที่ตั้งใจขาย</span></div>
-        <div class="source-line"><span class="num">02</span><b>Website</b><span>สิ่งที่ผู้เล่นเห็นและซื้อ</span></div>
-        <div class="source-line"><span class="num">03</span><b>Aztek Tool</b><span>ชื่อและช่วงเวลาเปิด–ปิด</span></div>
-        <div class="source-line"><span class="num">04</span><b>Receipt</b><span>หลักฐานว่าสินค้าเข้าจริง</span></div>
+        <div class="source-line"><span class="num">01</span><b>หลายรูปแบบ</b><span>Excel, ภาพ Website, Aztek Tool และ Receipt ต้องไล่ดูแยกกัน</span></div>
+        <div class="source-line"><span class="num">02</span><b>ชื่อจับคู่ยาก</b><span>ชื่อไทย–อังกฤษและข้อความ OCR ไม่ควรใช้เป็น identity หลัก</span></div>
+        <div class="source-line"><span class="num">03</span><b>ความไม่ชัดเจน</b><span>ถ้า OCR อ่านไม่ได้แต่ระบบรีบตัดสิน จะเกิด PASS หรือ FAIL ปลอม</span></div>
+        <div class="source-line"><span class="num">04</span><b>ตามงานย้อนหลัง</b><span>หลักฐาน การยืนยัน และการแก้ไขกระจาย จึงอธิบายผลตรวจได้ยาก</span></div>
       </div>
       <div class="footer"><span>Pack QA Checker</span><span>02</span></div>
     </section>
@@ -514,14 +514,14 @@
     <section class="slide">
       <div class="topline"></div>
       <div class="eyebrow">Backend architecture</div>
-      <h2>ผู้ใช้เห็น Flow เดียว เพราะหลังบ้านรวมทุกแหล่งไว้ใน Model เดียว</h2>
+      <h2>ระบบหลังบ้านแก้ Pain point ด้วย Model กลางและกฎชุดเดียว</h2>
       <div class="flow">
-        <div class="flow-step"><strong>Source Adapters</strong><p>รับ Excel Req, Website OCR, Aztek Tool และ Receipt แยกตามหน้าที่</p></div>
-        <div class="flow-step"><strong>Canonical Model</strong><p>จัดข้อมูลเป็น bundle_id / item_id พร้อม value, source, confidence และ locator</p></div>
-        <div class="flow-step"><strong>Rule Engine</strong><p>ตรวจความตรงกันข้ามแหล่งและ invariant โดยไม่ผูกกับ Excel หรือ OCR</p></div>
-        <div class="flow-step"><strong>Report &amp; History</strong><p>คืน PASS / FAIL / UNVERIFIABLE พร้อมหลักฐานและ revision ที่ตรวจย้อนหลังได้</p></div>
+        <div class="flow-step"><strong>Source Adapters</strong><p>แปลง Excel และภาพแต่ละแหล่งเป็นโครงสร้างเดียว ลดการตีความซ้ำ</p></div>
+        <div class="flow-step"><strong>Canonical Model</strong><p>ใช้ bundle_id / item_id จับคู่ พร้อม provenance แทนการเชื่อชื่อที่ OCR อ่าน</p></div>
+        <div class="flow-step"><strong>Rule Engine</strong><p>ตรวจ cross-source และ invariant; ค่าที่อ่านไม่ออกคงเป็น UNVERIFIABLE</p></div>
+        <div class="flow-step"><strong>Report &amp; History</strong><p>รวมผล หลักฐาน การยืนยัน และ revision ให้ตรวจย้อนกลับได้</p></div>
       </div>
-      <div class="statement" style="margin-top:56px">กฎสำคัญของระบบ: อ่านหลักฐานไม่ชัด → UNVERIFIABLE · พบค่าขัดกับ Spec → FAIL</div>
+      <div class="statement" style="margin-top:56px">ผลลัพธ์: ผู้ใช้ใช้เวลากับจุดที่ระบบยังยืนยันไม่ได้ แทนการไล่ตรวจทุกช่องใหม่ทั้งหมด</div>
       <div class="footer"><span>Pack QA Checker</span><span>03</span></div>
     </section>
 
