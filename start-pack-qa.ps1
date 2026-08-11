@@ -5,6 +5,7 @@ $webRoot = Join-Path $projectRoot "web"
 $runtimeRoot = Join-Path $projectRoot ".runtime"
 $userProfile = [Environment]::GetFolderPath("UserProfile")
 $pythonPath = Join-Path $userProfile ".cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+$pythonDependencyRoot = Join-Path $runtimeRoot "python-libs"
 $apiHealthUrl = "http://127.0.0.1:8765/api/health"
 $webUrl = "http://localhost:3000"
 
@@ -53,6 +54,11 @@ function Stop-WithMessage {
     exit 1
 }
 
+function Test-PackQaPythonDependencies {
+    & $pythonPath -c "import yaml, jinja2, pydantic" *> $null
+    return $LASTEXITCODE -eq 0
+}
+
 if (-not (Test-Path -LiteralPath $pythonPath -PathType Leaf)) {
     Stop-WithMessage "Pack QA Python runtime was not found."
 }
@@ -66,6 +72,32 @@ if (-not $npmCommand) {
 }
 
 New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $pythonDependencyRoot -Force | Out-Null
+
+if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
+    $env:PYTHONPATH = $pythonDependencyRoot
+}
+else {
+    $env:PYTHONPATH = "$pythonDependencyRoot;$env:PYTHONPATH"
+}
+
+if (-not (Test-PackQaPythonDependencies)) {
+    Write-Host "Preparing Pack QA Python dependencies..." -ForegroundColor Cyan
+    $pipOutLog = Join-Path $runtimeRoot "pip.log"
+    $pipErrorLog = Join-Path $runtimeRoot "pip-error.log"
+    & $pythonPath -m pip install `
+        --disable-pip-version-check `
+        --upgrade `
+        --target $pythonDependencyRoot `
+        "Jinja2>=3.1,<4" `
+        "pydantic>=2.13,<3" `
+        "PyYAML>=6.0,<7" `
+        1> $pipOutLog `
+        2> $pipErrorLog
+    if ($LASTEXITCODE -ne 0 -or -not (Test-PackQaPythonDependencies)) {
+        Stop-WithMessage "Pack QA Python dependencies could not be prepared."
+    }
+}
 
 Write-Host "Starting Pack QA..." -ForegroundColor Cyan
 

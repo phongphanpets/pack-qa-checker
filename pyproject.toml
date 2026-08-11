@@ -1,7 +1,7 @@
 [project]
 name = "pack-qa-checker"
 version = "0.1.0"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "Jinja2>=3.1,<4",
     "pydantic>=2.13,<3",
