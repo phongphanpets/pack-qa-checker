@@ -513,15 +513,15 @@
 
     <section class="slide">
       <div class="topline"></div>
-      <div class="eyebrow">One guided flow</div>
-      <h2>Flow เดียว ลดการกรอกและการไล่เทียบเอง</h2>
+      <div class="eyebrow">Backend architecture</div>
+      <h2>ผู้ใช้เห็น Flow เดียว เพราะหลังบ้านรวมทุกแหล่งไว้ใน Model เดียว</h2>
       <div class="flow">
-        <div class="flow-step"><strong>วาง Excel</strong><p>ก๊อบตาราง Req ทั้งบล็อก ระบบแยกค่าให้ทันที</p></div>
-        <div class="flow-step"><strong>ใส่ภาพหลักฐาน</strong><p>Website และ Aztek Tool อ่านด้วย OCR บนเครื่อง</p></div>
-        <div class="flow-step"><strong>ยืนยันจุดไม่ชัด</strong><p>กดตาม Spec หรือแก้เฉพาะช่องที่ต้องตรวจคน</p></div>
-        <div class="flow-step"><strong>ดูผลและบันทึก</strong><p>PM เห็นสรุป หลักฐาน และเปิด History ต่อได้</p></div>
+        <div class="flow-step"><strong>Source Adapters</strong><p>รับ Excel Req, Website OCR, Aztek Tool และ Receipt แยกตามหน้าที่</p></div>
+        <div class="flow-step"><strong>Canonical Model</strong><p>จัดข้อมูลเป็น bundle_id / item_id พร้อม value, source, confidence และ locator</p></div>
+        <div class="flow-step"><strong>Rule Engine</strong><p>ตรวจความตรงกันข้ามแหล่งและ invariant โดยไม่ผูกกับ Excel หรือ OCR</p></div>
+        <div class="flow-step"><strong>Report &amp; History</strong><p>คืน PASS / FAIL / UNVERIFIABLE พร้อมหลักฐานและ revision ที่ตรวจย้อนหลังได้</p></div>
       </div>
-      <div class="statement" style="margin-top:70px">เป้าหมายคือให้ผู้ใช้ “โยนข้อมูลและภาพ” แล้วใช้เวลาเฉพาะจุดที่ระบบยังยืนยันไม่ได้</div>
+      <div class="statement" style="margin-top:56px">กฎสำคัญของระบบ: อ่านหลักฐานไม่ชัด → UNVERIFIABLE · พบค่าขัดกับ Spec → FAIL</div>
       <div class="footer"><span>Pack QA Checker</span><span>03</span></div>
     </section>
 
