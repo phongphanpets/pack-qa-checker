@@ -37,6 +37,14 @@ import {
 } from "@/lib/pilot-session";
 import type { SpecBundle } from "@/lib/website-ocr";
 import {
+  EMPTY_PM_REVIEW,
+  evaluateApprovalReadiness,
+  invalidatePmDecision,
+  type ApprovalReadiness,
+  type PmDecision,
+  type PmReviewState,
+} from "@/lib/pm-review";
+import {
   deleteHistory,
   listHistory,
   loadHistory,
@@ -125,7 +133,11 @@ function display(value: unknown) {
   return String(value);
 }
 
-function decision(report: ValidationReport) {
+function decision(
+  report: ValidationReport,
+  readiness: ApprovalReadiness,
+  review: PmReviewState,
+) {
   if (report.summary.FAIL > 0) {
     return {
       tone: "blocked",
@@ -150,11 +162,41 @@ function decision(report: ValidationReport) {
       detail: "ตรวจคำเตือนก่อนส่งอนุมัติ",
     };
   }
+  if (review.decision === "changes_requested") {
+    return {
+      tone: "blocked",
+      eyebrow: "PM ส่งกลับแก้ไข",
+      title: review.reviewer_name
+        ? `ส่งกลับโดย ${review.reviewer_name}`
+        : "มีรายการที่ต้องแก้ไข",
+      detail: review.note || "แก้ข้อมูลหรือหลักฐาน แล้วตรวจและส่งให้ PM ใหม่",
+    };
+  }
+  if (!readiness.evidence_complete) {
+    return {
+      tone: "review",
+      eyebrow: "ผลข้อมูลผ่าน · หลักฐานยังไม่ครบ",
+      title: `รออีก ${readiness.missing.length} รายการก่อนส่ง PM`,
+      detail: readiness.missing.join(" · "),
+    };
+  }
+  if (review.decision === "approved" && readiness.ready_for_approval) {
+    return {
+      tone: "ready",
+      eyebrow: "PM อนุมัติแล้ว",
+      title: review.reviewer_name
+        ? `อนุมัติโดย ${review.reviewer_name}`
+        : "แพ็กได้รับการอนุมัติแล้ว",
+      detail: review.decided_at
+        ? `บันทึกเมื่อ ${new Date(review.decided_at).toLocaleString("th-TH")}`
+        : "บันทึกคำตัดสินไว้ใน History แล้ว",
+    };
+  }
   return {
     tone: "ready",
-    eyebrow: "พร้อมส่งอนุมัติ",
+    eyebrow: "หลักฐานครบ",
     title: `ผ่าน ${report.summary.PASS}/${report.summary.checks} รายการ`,
-    detail: "ไม่พบข้อผิดพลาดหรือข้อมูลที่ยังยืนยันไม่ได้",
+    detail: "พร้อมให้ PM ตรวจหลักฐานและบันทึกคำตัดสิน",
   };
 }
 
@@ -190,6 +232,9 @@ export default function Home() {
   const [websiteEvidence, setWebsiteEvidence] = useState<EvidenceRef[]>([]);
   const [aztekEvidence, setAztekEvidence] = useState<EvidenceRef | null>(null);
   const [receiptEvidence, setReceiptEvidence] = useState<EvidenceRef[]>([]);
+  const [pmReview, setPmReview] = useState<PmReviewState>(() => ({
+    ...EMPTY_PM_REVIEW,
+  }));
   const [restoredSession, setRestoredSession] =
     useState<PilotSession | null>(null);
   const [resumeWebsiteReview, setResumeWebsiteReview] = useState(false);
@@ -241,6 +286,30 @@ export default function Home() {
       return statusMatches && searchMatches;
     });
   }, [rows, activeStatus, query]);
+  const approvalReadiness = useMemo(
+    () =>
+      evaluateApprovalReadiness({
+        summary: report?.summary ?? null,
+        has_spec_evidence: Boolean(specEvidence),
+        website_evidence_count: websiteEvidence.length,
+        has_aztek_evidence: Boolean(aztekEvidence),
+        receipt_evidence_count: receiptEvidence.length,
+        receipt_confirmed: pmReview.receipt_confirmed,
+      }),
+    [
+      aztekEvidence,
+      pmReview.receipt_confirmed,
+      receiptEvidence.length,
+      report?.summary,
+      specEvidence,
+      websiteEvidence.length,
+    ],
+  );
+  const decisionState = useMemo(
+    () =>
+      report ? decision(report, approvalReadiness, pmReview) : null,
+    [approvalReadiness, pmReview, report],
+  );
   const handleWebsiteObservations = useCallback(
     (observations: ReviewedWebsiteObservation[]) => {
       setWebsiteObservations(observations);
@@ -249,6 +318,27 @@ export default function Home() {
   );
   const handleImagesPending = useCallback((pending: boolean) => {
     setImagesPending(pending);
+  }, []);
+  const handleSpecEvidence = useCallback((evidence: EvidenceRef | null) => {
+    setSpecEvidence(evidence);
+    setPmReview((current) => invalidatePmDecision(current));
+  }, []);
+  const handleWebsiteEvidence = useCallback((evidence: EvidenceRef[]) => {
+    setWebsiteEvidence(evidence);
+    setPmReview((current) => invalidatePmDecision(current));
+  }, []);
+  const handleAztekEvidence = useCallback((evidence: EvidenceRef | null) => {
+    setAztekEvidence(evidence);
+    setPmReview((current) => invalidatePmDecision(current));
+  }, []);
+  const handleReceiptEvidence = useCallback((evidence: EvidenceRef[]) => {
+    setReceiptEvidence(evidence);
+    setPmReview((current) => ({
+      ...invalidatePmDecision(current),
+      receipt_confirmed: evidence.length
+        ? current.receipt_confirmed
+        : false,
+    }));
   }, []);
   const handlePackForm = useCallback(
     (
@@ -284,6 +374,7 @@ export default function Home() {
     setReceiptEvidence(
       evidenceListFromStored(session.evidence.receipt),
     );
+    setPmReview(session.pm_review);
     setRestoredSession(session);
     setResumeWebsiteReview(!session.website_observations.length);
     setRevisionDirty(false);
@@ -292,7 +383,10 @@ export default function Home() {
   }, []);
 
   const createSession = useCallback(
-    (reportOverride?: ValidationReport | null) =>
+    (
+      reportOverride?: ValidationReport | null,
+      pmReviewOverride?: PmReviewState,
+    ) =>
       createPilotSession({
         packMode,
         packData,
@@ -304,6 +398,7 @@ export default function Home() {
         websiteObservations,
         imagesPending,
         report: reportOverride === undefined ? report : reportOverride,
+        pmReview: pmReviewOverride ?? pmReview,
         specEvidence,
         websiteEvidence,
         aztekEvidence,
@@ -317,6 +412,7 @@ export default function Home() {
       packFormValid,
       packMode,
       packYamlText,
+      pmReview,
       receiptEvidence,
       report,
       restoredSession?.pack_yaml_name,
@@ -364,7 +460,10 @@ export default function Home() {
     let active = true;
     void fetch("http://127.0.0.1:8765/api/health")
       .then((response) => {
-        if (active) setApiStatus(response.ok ? "online" : "offline");
+        if (active) {
+          setApiStatus(response.ok ? "online" : "offline");
+          if (response.ok) void refreshHistory();
+        }
       })
       .catch(() => {
         if (active) setApiStatus("offline");
@@ -372,11 +471,7 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, []);
-
-  useEffect(() => {
-    if (apiStatus === "online") void refreshHistory();
-  }, [apiStatus, refreshHistory]);
+  }, [refreshHistory]);
 
   useEffect(() => {
     if (
@@ -495,9 +590,11 @@ export default function Home() {
         throw new Error(payload.error || "ตรวจข้อมูลไม่สำเร็จ");
       }
       setReport(payload);
+      const nextReview = invalidatePmDecision(pmReview);
+      setPmReview(nextReview);
       setRevisionDirty(false);
       try {
-        const session = await createSession(payload);
+        const session = await createSession(payload, nextReview);
         await saveHistory(session);
         await refreshHistory();
       } catch {
@@ -631,6 +728,58 @@ export default function Home() {
     }
   }
 
+  function updatePmReview(patch: Partial<PmReviewState>) {
+    setPmReview((current) => ({
+      ...invalidatePmDecision(current),
+      ...patch,
+    }));
+  }
+
+  async function recordPmDecision(nextDecision: PmDecision) {
+    if (!report) return;
+    const reviewerName = pmReview.reviewer_name.trim();
+    const note = pmReview.note.trim();
+    if (!reviewerName) {
+      setError("กรอกชื่อผู้ตรวจ PM ก่อนบันทึกคำตัดสิน");
+      return;
+    }
+    if (nextDecision === "approved" && !approvalReadiness.ready_for_approval) {
+      setError(
+        `ยังอนุมัติไม่ได้ — ${approvalReadiness.missing.join(" · ") || "ผลตรวจยังไม่ผ่านครบ"}`,
+      );
+      return;
+    }
+    if (nextDecision === "changes_requested" && !note) {
+      setError("ระบุสิ่งที่ต้องแก้ก่อนส่งกลับ");
+      return;
+    }
+    const nextReview: PmReviewState = {
+      ...pmReview,
+      decision: nextDecision,
+      reviewer_name: reviewerName,
+      note,
+      decided_at: new Date().toISOString(),
+    };
+    try {
+      setDraftStatus("saving");
+      const session = await createSession(report, nextReview);
+      await saveLastDraft(session);
+      await saveHistory(session);
+      setPmReview(nextReview);
+      setRestoredSession(session);
+      await refreshHistory();
+      setDraftStatus("saved");
+      setError("");
+    } catch (caught) {
+      setDraftStatus("error");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "บันทึกคำตัดสิน PM ไม่สำเร็จ",
+      );
+    }
+  }
+
   async function resetWork() {
     await clearLastDraft().catch(() => undefined);
     setPackMode("excel");
@@ -648,6 +797,7 @@ export default function Home() {
     setWebsiteEvidence([]);
     setAztekEvidence(null);
     setReceiptEvidence([]);
+    setPmReview({ ...EMPTY_PM_REVIEW });
     setRestoredSession(null);
     setResumeWebsiteReview(false);
     setRevisionDirty(false);
@@ -825,8 +975,8 @@ export default function Home() {
               <HistoryEvidenceEditor
                 website={websiteEvidence}
                 receipt={receiptEvidence}
-                onWebsiteChange={setWebsiteEvidence}
-                onReceiptChange={setReceiptEvidence}
+                onWebsiteChange={handleWebsiteEvidence}
+                onReceiptChange={handleReceiptEvidence}
               />
               {revisionDirty && (
                 <div className="history-recheck-note">
@@ -844,7 +994,7 @@ export default function Home() {
                   disabled={!specBundles.length}
                   onChange={handleWebsiteObservations}
                   onPendingChange={handleImagesPending}
-                  onEvidenceChange={setWebsiteEvidence}
+                  onEvidenceChange={handleWebsiteEvidence}
                   initialObservations={websiteObservations}
                   initialEvidence={websiteEvidence}
                   onRevisionChange={setRevisionDirty}
@@ -881,8 +1031,8 @@ export default function Home() {
                 <ExcelPasteForm
                   key={`excel-${workspaceKey}`}
                   onChange={handlePackForm}
-                  onSpecEvidenceChange={setSpecEvidence}
-                  onAztekEvidenceChange={setAztekEvidence}
+                  onSpecEvidenceChange={handleSpecEvidence}
+                  onAztekEvidenceChange={handleAztekEvidence}
                 />
               ) : packMode === "form" ? (
                 <PackForm key={`form-${workspaceKey}`} onChange={handlePackForm} />
@@ -912,12 +1062,12 @@ export default function Home() {
                 disabled={inspecting || !specBundles.length}
                 onChange={handleWebsiteObservations}
                 onPendingChange={handleImagesPending}
-                onEvidenceChange={setWebsiteEvidence}
+                onEvidenceChange={handleWebsiteEvidence}
               />
 
               <ReceiptEvidence
                 key={`receipt-${workspaceKey}`}
-                onEvidenceChange={setReceiptEvidence}
+                onEvidenceChange={handleReceiptEvidence}
               />
 
               <details className="legacy-ocr">
@@ -1002,21 +1152,19 @@ export default function Home() {
           ) : (
             <>
               <div
-                className={`decision-banner ${
-                  decision(report).tone
-                }`}
+                className={`decision-banner ${decisionState?.tone ?? "review"}`}
               >
                 <div className="decision-icon" aria-hidden>
-                  {decision(report).tone === "ready"
+                  {decisionState?.tone === "ready"
                     ? "✓"
-                    : decision(report).tone === "blocked"
+                    : decisionState?.tone === "blocked"
                       ? "!"
                       : "?"}
                 </div>
                 <div>
-                  <span>{decision(report).eyebrow}</span>
-                  <strong>{decision(report).title}</strong>
-                  <p>{decision(report).detail}</p>
+                  <span>{decisionState?.eyebrow}</span>
+                  <strong>{decisionState?.title}</strong>
+                  <p>{decisionState?.detail}</p>
                 </div>
               </div>
 
@@ -1047,6 +1195,12 @@ export default function Home() {
                     websiteEvidence={websiteEvidence}
                     aztekEvidence={aztekEvidence}
                     receiptEvidence={receiptEvidence}
+                    readiness={approvalReadiness}
+                    review={pmReview}
+                    onReviewChange={updatePmReview}
+                    onDecision={(nextDecision) =>
+                      void recordPmDecision(nextDecision)
+                    }
                   />
                 </section>
               ) : (
@@ -1208,7 +1362,7 @@ function FilePicker({
   );
 }
 
-function PmReview({ report, document, rows, specEvidence, websiteEvidence, aztekEvidence, receiptEvidence }: {
+function PmReview({ report, document, rows, specEvidence, websiteEvidence, aztekEvidence, receiptEvidence, readiness, review, onReviewChange, onDecision }: {
   report: ValidationReport;
   document: PackFormDocument | null;
   rows: ResultRow[];
@@ -1216,6 +1370,10 @@ function PmReview({ report, document, rows, specEvidence, websiteEvidence, aztek
   websiteEvidence: EvidenceRef[];
   aztekEvidence: EvidenceRef | null;
   receiptEvidence: EvidenceRef[];
+  readiness: ApprovalReadiness;
+  review: PmReviewState;
+  onReviewChange: (patch: Partial<PmReviewState>) => void;
+  onDecision: (decision: PmDecision) => void;
 }) {
   const bundle = document?.bundles[0] as
     | { spec?: PmSpec }
@@ -1260,13 +1418,57 @@ function PmReview({ report, document, rows, specEvidence, websiteEvidence, aztek
         ]
       : []),
   ];
+  const reviewStatus =
+    review.decision === "approved" && readiness.ready_for_approval
+      ? { tone: "ready", title: "PM อนุมัติแล้ว", detail: `ผู้ตรวจ: ${review.reviewer_name}` }
+      : review.decision === "changes_requested"
+        ? { tone: "blocked", title: "PM ส่งกลับแก้ไข", detail: review.note }
+        : issues.length
+          ? { tone: "review", title: `รอยืนยัน ${issues.length} จุด`, detail: "ดูจุดที่ต้องตรวจในหลักฐานด้านล่าง" }
+          : !readiness.evidence_complete
+            ? { tone: "review", title: "ผลข้อมูลผ่าน แต่หลักฐานยังไม่ครบ", detail: readiness.missing.join(" · ") }
+            : { tone: "ready", title: "พร้อมให้ PM ตัดสินใจ", detail: "ผลตรวจและหลักฐานครบตาม Req" };
+  const decisionLocked = review.decision !== "pending";
   return <div className="pm-review">
-    <div className={`pm-review-status ${issues.length ? "review" : "ready"}`}><strong>{issues.length ? `รอยืนยัน ${issues.length} จุด` : "พร้อมให้ PM อนุมัติ"}</strong><span>{issues.length ? "ดูจุดที่ต้องตรวจในหลักฐานด้านล่าง" : "ผลที่ตรวจได้ทั้งหมดตรงตาม Req"}</span></div>
+    <div className={`pm-review-status ${reviewStatus.tone}`}><strong>{reviewStatus.title}</strong><span>{reviewStatus.detail}</span></div>
     <section className="pm-checked">
       <header><div><strong>ตรวจอะไรไปบ้าง</strong><small>สรุปเงื่อนไขที่ระบบใช้ตัดสินรอบนี้</small></div><span>{report.summary.PASS}/{report.summary.checks} ผ่าน</span></header>
       <div className="pm-check-grid">
         {checkCards.map((check) => <article className={`pm-check ${check.status.toLowerCase()}`} key={check.title}><span>{check.status === "PASS" ? "✓" : check.status === "FAIL" ? "!" : "?"}</span><div><strong>{check.title}</strong><small>{check.detail}</small></div><b>{check.status === "PASS" ? "ผ่าน" : check.status === "FAIL" ? "ไม่ผ่าน" : "ตรวจเพิ่ม"}</b></article>)}
       </div>
+    </section>
+    <section className={`pm-approval ${reviewStatus.tone}`}>
+      <header>
+        <div>
+          <strong>คำตัดสินของ PM</strong>
+          <small>บันทึกพร้อม Revision ใน History เพื่อเปิดตรวจย้อนหลังได้</small>
+        </div>
+        <span>{review.decision === "approved" ? "อนุมัติแล้ว" : review.decision === "changes_requested" ? "ส่งกลับแก้ไข" : readiness.ready_for_approval ? "พร้อมตัดสินใจ" : "รอข้อมูล/หลักฐาน"}</span>
+      </header>
+      <label className={`receipt-attestation ${receiptEvidence.length ? "" : "disabled"}`}>
+        <input
+          type="checkbox"
+          checked={review.receipt_confirmed}
+          disabled={!receiptEvidence.length || decisionLocked}
+          onChange={(event) => onReviewChange({ receipt_confirmed: event.target.checked })}
+        />
+        <span><strong>ตรวจ Receipt แล้ว และสินค้าที่ซื้อเข้าเกมจริง</strong><small>{receiptEvidence.length ? `${receiptEvidence.length} รูปแนบอยู่ในงานนี้` : "แนบภาพ Receipt ก่อนยืนยัน"}</small></span>
+      </label>
+      <div className="pm-approval-fields">
+        <label><span>ชื่อผู้ตรวจ PM</span><input value={review.reviewer_name} disabled={decisionLocked} onChange={(event) => onReviewChange({ reviewer_name: event.target.value })} placeholder="ชื่อหรือชื่อเล่น" /></label>
+        <label><span>หมายเหตุ</span><textarea value={review.note} disabled={decisionLocked} onChange={(event) => onReviewChange({ note: event.target.value })} placeholder="ระบุสิ่งที่ต้องแก้ หรือหมายเหตุการอนุมัติ" rows={2} /></label>
+      </div>
+      {decisionLocked ? (
+        <div className="pm-decision-record">
+          <span>{review.decided_at ? new Date(review.decided_at).toLocaleString("th-TH") : "บันทึกใน History แล้ว"}</span>
+          <button type="button" onClick={() => onReviewChange({ decision: "pending", decided_at: null })}>เปิดเพื่อตัดสินใจใหม่</button>
+        </div>
+      ) : (
+        <div className="pm-approval-actions">
+          <button type="button" className="request-changes" onClick={() => onDecision("changes_requested")}>ส่งกลับแก้ไข</button>
+          <button type="button" className="approve" disabled={!readiness.ready_for_approval} onClick={() => onDecision("approved")}>อนุมัติแพ็ก</button>
+        </div>
+      )}
     </section>
     <PmSection title="1. Request parameters จาก Excel" subtitle="Req ต้นทางสำหรับการอนุมัติ" images={specEvidence ? [specEvidence] : []} centerImages modalImages>
       <div className="pm-params"><span>Start–End <b>{fieldValue(spec.start_date)} → {isPermanent ? "ถาวร" : fieldValue(spec.end_date)}</b></span><span>Seed Point <b>{fieldValue(spec.seed_point)}</b></span><span>GSP <b>{fieldValue(spec.gsp_earn)}</b></span><span>Limit <b>{fieldValue(spec.purchase_limit)}</b></span><span>Reset <b>{fieldValue(spec.reset_type)}</b></span></div>

@@ -59,6 +59,7 @@ test("builds one portable Pilot session with diagnostics", async () => {
   assert.equal(session.diagnostics.unverifiable_checks, 2);
   assert.equal(session.diagnostics.evidence_counts.spec, 1);
   assert.equal(session.evidence.spec?.name, "req.png");
+  assert.equal(session.pm_review.decision, "pending");
   assert.equal(parsePilotSession(JSON.stringify(session)).pack_mode, "excel");
 });
 
@@ -93,6 +94,38 @@ test("opens a Feedback export as a reusable Pilot session", async () => {
   });
 
   assert.equal(parsePilotSession(feedback).saved_at, session.saved_at);
+});
+
+test("preserves a PM decision and keeps old sessions backward compatible", async () => {
+  const session = await createPilotSession({
+    packMode: "excel",
+    packData: null,
+    packFormValid: true,
+    packYamlName: null,
+    packYamlText: null,
+    websiteOcrYamlText: null,
+    specBundles: [],
+    websiteObservations: [],
+    imagesPending: false,
+    report: { summary: { FAIL: 0, WARN: 0, UNVERIFIABLE: 0 } },
+    pmReview: {
+      receipt_confirmed: true,
+      decision: "approved",
+      reviewer_name: "PM A",
+      note: "พร้อมปล่อย",
+      decided_at: "2026-08-13T10:00:00.000Z",
+    },
+    specEvidence: null,
+    websiteEvidence: [],
+    aztekEvidence: null,
+    receiptEvidence: [],
+    userAgent: "Pack QA test",
+  });
+  assert.equal(parsePilotSession(JSON.stringify(session)).pm_review.decision, "approved");
+
+  const legacy = JSON.parse(JSON.stringify(session));
+  delete legacy.pm_review;
+  assert.equal(parsePilotSession(JSON.stringify(legacy)).pm_review.decision, "pending");
 });
 
 function field(

@@ -1,6 +1,10 @@
 import type { PackFormDocument } from "@/components/PackForm";
 import type { ReviewedWebsiteObservation } from "@/components/WebsiteImageReview";
 import type { SpecBundle } from "@/lib/website-ocr";
+import {
+  normalizePmReview,
+  type PmReviewState,
+} from "./pm-review.ts";
 
 export const PILOT_VERSION = "Pilot RC1";
 export const SESSION_SCHEMA_VERSION = 1;
@@ -32,6 +36,7 @@ export type PilotSession = {
   website_observations: ReviewedWebsiteObservation[];
   images_pending: boolean;
   report: unknown | null;
+  pm_review: PmReviewState;
   evidence: {
     spec: StoredEvidence | null;
     website: StoredEvidence[];
@@ -63,6 +68,7 @@ export type PilotSessionInput = {
   websiteObservations: ReviewedWebsiteObservation[];
   imagesPending: boolean;
   report: unknown | null;
+  pmReview?: PmReviewState;
   specEvidence: EvidenceRef | null;
   websiteEvidence: EvidenceRef[];
   aztekEvidence: EvidenceRef | null;
@@ -107,6 +113,7 @@ export async function createPilotSession(
     website_observations: input.websiteObservations,
     images_pending: input.imagesPending,
     report: input.report,
+    pm_review: normalizePmReview(input.pmReview),
     evidence,
     diagnostics: {
       user_agent:
@@ -155,7 +162,10 @@ export function parsePilotSession(raw: string): PilotSession {
   ) {
     throw new Error("ไฟล์งาน Pack QA มีข้อมูลไม่ครบ");
   }
-  return parsed as PilotSession;
+  return {
+    ...(parsed as PilotSession),
+    pm_review: normalizePmReview(parsed.pm_review),
+  };
 }
 
 export function evidenceFromStored(

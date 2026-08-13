@@ -46,13 +46,21 @@ export default function HistoryPanel({
         <div className="history-list">
           {entries.map((entry) => {
             const status =
-              entry.FAIL > 0
+              entry.approval_state === "approved"
+                ? "approved"
+                : entry.approval_state === "changes_requested"
+                  ? "fail"
+              : entry.FAIL > 0
                 ? "fail"
                 : entry.UNVERIFIABLE > 0 || entry.WARN > 0
                   ? "review"
                   : "pass";
             const statusText =
-              status === "fail"
+              entry.approval_state === "approved"
+                ? "PM อนุมัติแล้ว"
+                : entry.approval_state === "changes_requested"
+                  ? "PM ส่งกลับแก้"
+              : status === "fail"
                 ? `ผิด ${entry.FAIL}`
                 : status === "review"
                   ? `รอตรวจ ${entry.UNVERIFIABLE + entry.WARN}`
@@ -69,6 +77,7 @@ export default function HistoryPanel({
                   <small>
                     {new Date(entry.created_at).toLocaleString("th-TH")} ·{" "}
                     {entry.bundle_count} bundle · {entry.evidence_count} รูป
+                    {entry.reviewer_name ? ` · ${entry.reviewer_name}` : ""}
                   </small>
                 </button>
                 <button

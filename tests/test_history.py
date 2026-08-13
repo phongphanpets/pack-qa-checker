@@ -37,6 +37,13 @@ def pilot_session() -> dict:
             "receipt": [],
         },
         "diagnostics": {},
+        "pm_review": {
+            "receipt_confirmed": True,
+            "decision": "approved",
+            "reviewer_name": "PM A",
+            "note": "ready",
+            "decided_at": "2026-08-13T10:00:00+00:00",
+        },
     }
 
 
@@ -52,6 +59,8 @@ def test_history_store_round_trip_and_delete(tmp_path) -> None:
     assert entries[0]["title"] == "มือใหม่ : ใบทหาร 140"
     assert entries[0]["UNVERIFIABLE"] == 1
     assert entries[0]["evidence_count"] == 2
+    assert entries[0]["approval_state"] == "approved"
+    assert entries[0]["reviewer_name"] == "PM A"
     assert store.get(entry["id"]) == session
     duplicate = store.save(session)
     assert duplicate["id"] == entry["id"]

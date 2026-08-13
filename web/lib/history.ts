@@ -14,6 +14,9 @@ export type HistoryEntry = {
   WARN: number;
   UNVERIFIABLE: number;
   evidence_count: number;
+  approval_state: "pending" | "approved" | "changes_requested";
+  reviewer_name: string;
+  pm_decided_at: string | null;
 };
 
 export async function listHistory(): Promise<HistoryEntry[]> {

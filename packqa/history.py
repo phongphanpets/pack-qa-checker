@@ -43,7 +43,8 @@ class HistoryStore:
                 """
                 SELECT id, created_at, title, bundle_count, pack_mode,
                        checks, pass_count, fail_count, warn_count,
-                       unverifiable_count, evidence_count
+                       unverifiable_count, evidence_count, approval_state,
+                       reviewer_name, pm_decided_at
                 FROM validation_history
                 ORDER BY created_at DESC
                 LIMIT ?
@@ -88,6 +89,17 @@ class HistoryStore:
                 )
                 """
             )
+            _ensure_column(
+                connection,
+                "approval_state",
+                "TEXT NOT NULL DEFAULT 'pending'",
+            )
+            _ensure_column(
+                connection,
+                "reviewer_name",
+                "TEXT NOT NULL DEFAULT ''",
+            )
+            _ensure_column(connection, "pm_decided_at", "TEXT")
             _compact_duplicates(connection)
             connection.execute(
                 """
@@ -117,6 +129,11 @@ def _metadata(session: dict[str, Any]) -> dict[str, Any]:
             values = evidence.get(key)
             if isinstance(values, list):
                 evidence_count += len(values)
+    pm_review = session.get("pm_review")
+    review = pm_review if isinstance(pm_review, dict) else {}
+    approval_state = str(review.get("decision") or "pending")
+    if approval_state not in {"pending", "approved", "changes_requested"}:
+        approval_state = "pending"
     return {
         "title": title,
         "bundle_count": _integer(summary.get("bundles"), len(bundles)),
@@ -127,6 +144,13 @@ def _metadata(session: dict[str, Any]) -> dict[str, Any]:
         "WARN": _integer(summary.get("WARN")),
         "UNVERIFIABLE": _integer(summary.get("UNVERIFIABLE")),
         "evidence_count": evidence_count,
+        "approval_state": approval_state,
+        "reviewer_name": str(review.get("reviewer_name") or ""),
+        "pm_decided_at": (
+            str(review["decided_at"])
+            if isinstance(review.get("decided_at"), str)
+            else None
+        ),
     }
 
 
@@ -166,6 +190,9 @@ def _row_metadata(row: sqlite3.Row) -> dict[str, Any]:
         "WARN": row["warn_count"],
         "UNVERIFIABLE": row["unverifiable_count"],
         "evidence_count": row["evidence_count"],
+        "approval_state": row["approval_state"],
+        "reviewer_name": row["reviewer_name"],
+        "pm_decided_at": row["pm_decided_at"],
     }
 
 
@@ -255,8 +282,9 @@ def _write_entry(
         INSERT INTO validation_history (
             id, created_at, title, bundle_count, pack_mode,
             checks, pass_count, fail_count, warn_count,
-            unverifiable_count, evidence_count, session_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            unverifiable_count, evidence_count, approval_state,
+            reviewer_name, pm_decided_at, session_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         {conflict}
         """,
         (
@@ -271,6 +299,26 @@ def _write_entry(
             entry["WARN"],
             entry["UNVERIFIABLE"],
             entry["evidence_count"],
+            entry["approval_state"],
+            entry["reviewer_name"],
+            entry["pm_decided_at"],
             payload,
         ),
     )
+
+
+def _ensure_column(
+    connection: sqlite3.Connection,
+    name: str,
+    declaration: str,
+) -> None:
+    columns = {
+        row["name"]
+        for row in connection.execute(
+            "PRAGMA table_info(validation_history)"
+        ).fetchall()
+    }
+    if name not in columns:
+        connection.execute(
+            f"ALTER TABLE validation_history ADD COLUMN {name} {declaration}"
+        )
