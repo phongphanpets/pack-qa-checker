@@ -4,19 +4,19 @@
     {
       "id": 1,
       "prompt": "ใช้ไฟล์ Flash Sale tab 2 Sep ทำไฟล์ Aztek import เฉพาะแพ็กมือใหม่ II และ III โดยใช้ไฟล์ที่ import ผ่านเป็น template, Tier Trainee, และรวม GSP/EXP ด้วย",
-      "expected_output": "A workbook containing only two FIXED bundles, their source items, GSP wallet rows, and Player EXP rows with no chance values.",
+      "expected_output": "A workbook in the nine-column confirmed layout with only two FIXED bundles, source items, WALLET_DEBIT / Golden Seed Point rows, PLAYER_EXPERIENCE rows, consecutive positions, and blank rate columns.",
       "files": ["source.xlsx", "known-working-import.xlsx"]
     },
     {
       "id": 2,
       "prompt": "ทำ TP & Gold 9.1 เป็น Aztek import: ของ Fixed แยก bundle และของสุ่ม Secret Chance เท่ากับ Chance; Gold_Cur และเหรียญ Popo ใช้ mapping ล่าสุด",
-      "expected_output": "Separate Fixed and Random bundles, mapped wallet credits, Chance and Secret Chance equal on random rows, and total random chance of 100.",
+      "expected_output": "Separate Fixed and Random bundles in the nine-column layout, WALLET_CREDIT coin UUIDs, equal เรทสุ่ม/เรทโชว์ on random rows, and a random-rate total of 100.",
       "files": ["source.xlsx", "known-working-import.xlsx"]
     },
     {
       "id": 3,
       "prompt": "แก้ไฟล์ import ที่ทำไว้แล้วให้ Coin ทั้งหมดเป็น WALLET_CREDIT แต่ห้ามเปลี่ยน Chance หรือ Secret Chance",
-      "expected_output": "Only coin rows change to WALLET_CREDIT with values in Currency ID; all other row data remains unchanged.",
+      "expected_output": "Only coin rows change to WALLET_CREDIT with their confirmed UUIDs in Item ID; all other row data remains unchanged.",
       "files": ["existing-import.xlsx"]
     }
   ]

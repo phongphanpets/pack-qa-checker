@@ -1,90 +1,91 @@
 ---
 name: aztek-bundle-import
-description: Convert a Flash Sale/pack specification workbook into a validated Aztek Bundle Import `.xlsx`. Use whenever the user asks to make, update, repair, or validate an Aztek import file, bundle import, Flash Sale import, gacha pack import, Golden Seed Point (GSP), Player EXP, Chance, or Secret Chance. This skill is especially important when a working import workbook is supplied: preserve its exact column conventions and use it as the output template.
-compatibility: Requires Python with openpyxl and access to the source specification workbook plus a known-working Aztek import workbook.
+description: Convert a Flash Sale or pack-spec workbook into a validated Aztek Bundle Import `.xlsx` using the confirmed nine-column import layout. Use whenever the user asks to create, repair, migrate, or validate an Aztek bundle import, Flash Sale import, gacha pack import, Golden Seed Point (GSP), Player EXP, Chance, Secret Chance, or wallet-coin mapping. When a known-working import workbook is supplied, make it the canonical template.
+compatibility: Requires Python with openpyxl, a source specification workbook, and a known-working Aztek import workbook.
 ---
 
 # Aztek Bundle Import
 
-Create an import-ready workbook from the stated source sheet. Treat a user-supplied workbook that has already imported successfully as the canonical template: its headers, field placement, repeated values, IDs, and cell formatting override generic assumptions.
+Create an import-ready workbook from the requested source tab. A workbook that the user confirms has imported successfully is the source of truth for headers, item types, field placement, repeated values, and formatting. Do not apply an earlier schema when it differs from that confirmed template.
 
-## Inputs to confirm
+## Inputs to establish
 
-1. Source workbook and the exact source tab(s). Do not process similarly named tabs unless requested.
-2. A known-working import workbook. Inspect every populated row before constructing output.
-3. The target pack names. Do not include already-imported packs unless the user explicitly asks.
-4. Any current mapping rules for currencies, wallet credits, tiers, or chances.
+1. Source workbook and the exact source tab(s).
+2. The confirmed-working import template.
+3. Target pack names. Exclude packs the user has already imported unless asked.
+4. Current mapping rules, especially UUIDs for wallet credits.
 
-If an ID or UUID is not defined by the template or user, do not invent it. Ask for that value before generating an import file.
+Do not invent an item ID, UUID, chance, or item type. Ask when a required mapping is missing.
 
-## Required import layout
+## Confirmed import format
 
-Match this header order exactly when the working template uses it:
+Use this exact nine-column order:
 
-`Bundle Name`, `Bundle Type`, `Send Immediately`, `Item Type`, `Item ID`, `Item Code ID`, `Currency ID`, `Monarchy ID`, `Quantity`, `Tier`, `Chance`, `Secret Chance`.
+`Bundle Name`, `Bundle Type`, `Item Type`, `Item ID`, `Quantity`, `Tier`, `Position`, `เรทสุ่ม`, `เรทโชว์`
 
-Populate data according to the working template:
+The workbook has no `Send Immediately`, `Currency ID`, `Monarchy ID`, `Chance`, or `Secret Chance` columns. In this format:
 
-- `ITEM`: put its numeric item ID in `Item ID`.
-- `WALLET_CREDIT`: put the wallet/currency identifier in `Currency ID`.
-- `PLAYER_EXPERIENCE`: set `Monarchy ID` to the template's monarchy UUID/value.
-- Use `Tier = Trainee` when the user asks for all packs to use Trainee.
-- Keep `Item ID`, `Item Code ID`, `Currency ID`, and `Monarchy ID` blank unless their `Item Type` requires one.
-- Repeat `Bundle Type` and `Send Immediately` on every populated data row if the working import file does so.
+- `เรทสุ่ม` is Chance.
+- `เรทโชว์` is Secret Chance.
+- `Position` starts at `1` and increments by one within each bundle.
+- Use `Tier = Trainee` when the user requests Trainee for all rows.
 
-## Pack conversion rules
+## Item conversion rules
+
+| Source value | Item Type | Item ID |
+|---|---|---|
+| Regular item | `ITEM` | Numeric source item ID |
+| `Gold_Cur` | `ITEM` | `101147` |
+| `TP_Cur` | `ITEM` | `101145` |
+| `Diamond` | `ITEM` | `101146` |
+| Golden Seed Point | `WALLET_DEBIT` | `Golden Seed Point` |
+| Player EXP | `PLAYER_EXPERIENCE` | `PLAYER_EXPERIENCE` |
+| `Popo_Kupo_1` / Kupole Coin | `WALLET_CREDIT` | `a15e08db-9f3f-4bd2-a8bf-d4bb451e192d` |
+| `Popo_Fellow_1` / Fellow Coin | `WALLET_CREDIT` | `a15e08fd-4e26-4256-a1e4-068ef2db9e56` |
+| `Popo_God_1` / God Coin | `WALLET_CREDIT` | `a15e0918-7fe8-44af-af85-fd8250a1a78a` |
+
+Do not use coin display names as Item ID values. The UUID is required for each wallet-credit coin.
+
+## Pack conversion
 
 ### Fixed packs
 
-- Use `Bundle Type = FIXED` and `Send Immediately = 1`.
-- Fixed source rows with no rate remain fixed. Leave `Chance` and `Secret Chance` blank.
-- Add both GSP and Player EXP when the source pack specifies them:
-  - GSP is a `WALLET_CREDIT` row using the confirmed GSP currency identifier.
-  - EXP is a `PLAYER_EXPERIENCE` row using the confirmed monarchy identifier.
+- Set `Bundle Type = FIXED`.
+- Fixed source rewards with no rate remain fixed.
+- Leave both `เรทสุ่ม` and `เรทโชว์` blank.
+- Include Golden Seed Point and Player EXP when specified in the source.
 
 ### Random packs
 
-A random sales pack has two import bundles:
+Create two bundles:
 
-1. `<pack name> [Fixed]` for always-received rewards, GSP, and Player EXP. Use `FIXED` / `1` and leave both chance columns blank.
-2. `<pack name> [Random]` for chance-based rewards. Use `RANDOM` / `0`.
+1. `<pack name> [Fixed]` contains guaranteed rewards, Golden Seed Point, and Player EXP. Use `FIXED` and leave both rate columns blank.
+2. `<pack name> [Random]` contains chance-based rewards. Use `RANDOM`.
 
-Copy each source probability exactly as a numeric percentage value, e.g. source `0.1` stays `0.1`, not `0.001`. Unless the user gives another rule, set `Secret Chance` equal to `Chance` for every random row.
-
-## Confirmed mapping rules
-
-Apply these only when the user has not superseded them:
-
-| Source value | Import type | Destination value |
-|---|---|---|
-| `Gold_Cur` | `ITEM` | Item ID `101147` |
-| `TP_Cur` | `ITEM` | Item ID `101145` |
-| `Diamond` | `ITEM` | Item ID `101146` |
-| `Popo_God_1` | `WALLET_CREDIT` | Currency ID `God Coin` |
-| `Popo_Fellow_1` | `WALLET_CREDIT` | Currency ID `Fellow Coin` |
-| `Popo_Kupo_1` | `WALLET_CREDIT` | Currency ID `Kupole Coin` |
+Copy source probabilities as numeric percentage values: for example, source `0.1` remains `0.1`, not `0.001`. Set `เรทโชว์` equal to `เรทสุ่ม` for every random row unless the user supplies a different display-rate rule.
 
 ## Build workflow
 
-1. Read the working workbook with `openpyxl` and record headers, populated rows, types, field positions, styles, and UUIDs.
-2. Read the source workbook using `data_only=True` for quantities, GSP, and EXP so Excel formulas are converted to their cached values. Do not save this `data_only` workbook.
-3. Copy the known-working workbook to a new output path, then replace only its data rows. Preserve the header, column widths, and styles.
-4. Build target packs in the source ordering. Convert fixed and random rewards according to the rules above.
-5. Verify before delivery:
-   - no formula cells in import rows;
-   - every random row has `Chance == Secret Chance` when this rule applies;
-   - every fixed row has both chance columns blank;
-   - each random bundle's Chance total is exactly 100 (allow a small floating-point tolerance);
-   - wallet rewards use `WALLET_CREDIT` and the value is in `Currency ID`;
-   - GSP and Player EXP are present when specified;
+1. Inspect the confirmed template, including populated rows, styles, and field conventions.
+2. Read source quantities, GSP, and EXP using `data_only=True`; source Excel formulas must become their cached values, not formulas in the import file.
+3. Copy the confirmed template to a new output file. Preserve the header, widths, and row styling; replace only data rows.
+4. Convert the selected packs in source order. Assign positions within each bundle after all rows are determined.
+5. Validate before delivery:
+   - no formulas in import rows;
+   - every random row has `เรทสุ่ม == เรทโชว์` when this rule applies;
+   - every fixed row has both rate columns blank;
+   - each random bundle has a rate total of 100, with a small floating-point tolerance;
+   - all wallet coins use `WALLET_CREDIT` and their confirmed UUIDs;
+   - Golden Seed Point is `WALLET_DEBIT / Golden Seed Point`;
+   - Player EXP is `PLAYER_EXPERIENCE / PLAYER_EXPERIENCE`;
+   - every bundle's positions are consecutive from 1;
    - all rows use the requested Tier;
-   - no unexpected packs appear in the file.
-6. Report the output path and the validation summary concisely.
+   - no unexpected packs appear.
+6. Report the output path and a concise validation summary.
 
 ## Safety checks
 
-- Never change the source workbook.
-- Do not guess UUIDs, item IDs, or rate semantics.
-- Do not represent a fixed reward as a random row with `100` chance.
-- Do not add Secret Chance to fixed rows unless the user explicitly requests it.
-- If Chance totals differ from 100, report the source discrepancy instead of silently normalizing rates.
+- Never alter the source workbook.
+- Never substitute a fixed reward with a 100% random reward.
+- Do not add rates to fixed rows unless the user explicitly requests it.
+- If a random-rate total is not 100, report the source discrepancy; do not silently normalize it.

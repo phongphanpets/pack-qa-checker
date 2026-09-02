@@ -10,6 +10,7 @@ const { d1, r2 } = hostingConfig;
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
+const isPlaywrightLocalTest = process.env.PLAYWRIGHT_LOCAL_E2E === "1";
 
 const localBindingConfig = {
   main: "./worker/index.ts",
@@ -49,11 +50,17 @@ export default defineConfig(async () => {
       : undefined,
     plugins: [
       vinext(),
-      sites(),
-      cloudflare({
-        viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
-        config: localBindingConfig,
-      }),
+      // Sites/Cloudflare open local worker sockets. Browser smoke tests only
+      // render the client workspace, so they run without those bindings.
+      ...(isPlaywrightLocalTest
+        ? []
+        : [
+            sites(),
+            cloudflare({
+              viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
+              config: localBindingConfig,
+            }),
+          ]),
     ],
   };
 });
