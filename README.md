@@ -1,5 +1,11 @@
 # Pack QA Validation System — build brief
 
+## Reusable skills
+
+- [`skills/aztek-bundle-import`](skills/aztek-bundle-import/SKILL.md): แปลง Flash Sale
+  เป็นไฟล์ Aztek Bundle Import โดยยึดไฟล์ import ที่ผ่านแล้วเป็น template และตรวจ
+  Fixed/Random, GSP, Player EXP, Chance และ Secret Chance ก่อนส่ง
+
 เครื่องมือตรวจ in-game pack โดยเทียบข้อมูลหลายแหล่งกับ Spec (ground truth) แล้วออกรีพอร์ต
 เป้าหมายระยะยาว: แทนไฟล์ Excel "Approve งาน GM" ด้วยเว็บที่ตรวจให้ในตัว
 
