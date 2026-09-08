@@ -1,22 +1,23 @@
 # Pages and History delivery
 
-Requested outcome: publish the current Request Hub on GitHub Pages, finish History (status and reusable export files), and deliver a portable Aztek conversion skill in Git.
+Scope clarification on 2026-09-08: the team has no shared server yet. The user requested server preparation for later deployment. Do not claim the public site already has a running shared backend.
 
-Verified 2026-09-08:
-- GitHub Pages exists at https://phongphanpets.github.io/pack-qa-checker/ and currently serves the root of main.
-- Current application work is on master. No Actions Pages deployment workflow exists yet.
-- A separate Vite client entry is in web/pages-client; build with `npx vite build --config vite.pages.config.ts` from web. Existing vinext/server configuration remains available.
-- Request Hub calls /api/requests, /api/google-sheets, /api/read-spreadsheet, /api/bundle-import and /api/product-import. GitHub Pages cannot execute these server endpoints.
-- The active local backend is web/asset-preview-proxy.mjs (not the older Python RequestStore). It stores data/import_requests.local.json and data/request_exports. New events record creation, status changes and export artifact IDs. RequestHub now exposes all export versions and the recorded timeline. Unit test web/tests/request-events.test.mjs and Pages build pass; live integration and concurrent-write handling remain unverified.
-- History currently falls back to browser localStorage on network errors. This is not shared, cross-device history. Do not present that fallback as a completed shared History feature.
-- skills/aztek-import is a standalone conversion skill. Copy the entire folder to the destination Codex skills directory; it does not depend on application code.
-- Skill frontmatter and workflow YAML validated with js-yaml; referenced format.md exists. The bundled Python validator's YAML dependency is unavailable.
+## Delivered source
 
-User clarification: no shared server exists yet; prepare the server for deployment. Dockerfile.api and docs/server-setup.md provide this. Pages can publish with an explicit connection panel; shared functionality will be enabled after the team deploys the API. This supersedes the earlier live-backend deployment gate below.
-- API integration test now verifies eight simultaneous requests, authorization/CORS, history, template export and spreadsheet reading, persistence across restart, and byte-identical downloads. Pages browser smoke test passes. JSON writes are serialized within one process and atomically replaced.
+- Source branch: master. Static publication branch: gh-pages. URL: https://phongphanpets.github.io/pack-qa-checker/.
+- Pages entry: web/pages-client, built with `npx vite build --config vite.pages.config.ts` from web. This entry is separate from the existing vinext application.
+- The Pages connection panel accepts a server HTTPS URL and session-only team access token. Requests and downloads use the configured server. Before connection, the UI explicitly reports shared History, XLSX reading and export as unavailable; text parsing remains usable.
+- API server: web/asset-preview-proxy.mjs. Dockerfile.api packages Node and the actual import templates, with no npm runtime dependencies. Deployment steps and persistent-volume details are in docs/server-setup.md.
+- History records creation, status transitions and export artifacts. All export versions can be downloaded. Single-process writes are queued and atomic, with bounded Windows file-lock retries. Historic records without events are not given invented timelines.
+- API integration tests verify eight concurrent requests, access control/CORS, source retention, XLSX reading, export, restart persistence and byte-identical download. Pages browser smoke tests cover client startup and pasted-table parsing. Local and Pages builds pass.
+- skills/aztek-import is a portable skill independent of the application. YAML frontmatter and references validated using js-yaml. The bundled Python validator could not run due to its unavailable YAML dependency.
 
-Remaining delivery gates:
-1. Implement the Pages API/storage strategy, including request status history and retained downloadable exports. Keep webhook credentials on a server. Do not ship a Pages screen whose normal export/upload path fails on missing /api routes.
-2. Verify create, reload, status changes, reopening source, and re-downloading original export files. Verify cross-device history against a shared backend before claiming that capability.
-3. Build and test the Pages entry, add deployment automation, publish and check live assets and workflows.
-4. Validate the portable skill and push all finished changes. The overall goal is not complete until deployment and History are verified.
+## Publication maintenance
+
+GitHub OAuth rejected workflow creation because workflow scope is absent. docs/pages-workflow.example.yml is an optional workflow to install once that scope is available. Current publication uses compiled web/dist-pages files on gh-pages with .nojekyll, not the main branch or a running Node server.
+
+For updates, build and verify web/dist-pages, then commit those public files to gh-pages. Do not publish templates, request records, credentials or source attachments as static assets. Changing source on master alone does not update the published site.
+
+## Later server rollout
+
+The team must deploy the prepared API behind HTTPS with persistent storage and configure a team token. Then enter its URL/token in Pages and verify a request from a second browser. Discord remains optional and requires the team's webhook. No real Discord messages were sent in automated tests. The Docker image recipe is supplied; integration tests run the same Node entry directly, not a Docker daemon.

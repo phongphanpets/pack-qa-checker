@@ -150,7 +150,7 @@ export default function ImportAdapterWorkspace() {
       setRequestType(request?.request_type === "ITEM_CODE" ? "ITEM_CODE" : request ? "WEB_SHOP" : null);
       setItemCodeDetails(request?.request_type === "ITEM_CODE" && request?.payload ? request.payload : null);
       const rewards = request?.payload?.auto_rewards;
-      if (rewards?.golden_seed_point !== null && rewards?.player_exp !== null) {
+      if (rewards && rewards.golden_seed_point != null && rewards.player_exp != null) {
         setAutoRewards({
           title: request.title || "Product",
           seedPoint: Number(rewards.golden_seed_point),

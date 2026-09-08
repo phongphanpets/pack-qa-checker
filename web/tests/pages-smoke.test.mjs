@@ -34,6 +34,19 @@ test("Pages renders connection and parses a pasted bundle without a server", asy
     await page.screenshot({ path: "../outputs/pages-review/desktop.png", fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: "../outputs/pages-review/mobile.png", fullPage: true });
+    const request = { id: "SMOKE1", title: "Saved request", request_type: "ITEM_CODE", status: "REVIEW", updated_at: "2026-09-08T00:00:00Z", source_text: "1315002\tGod Fellow Ticket\t30", payload: {} };
+    await page.route("**/api/requests", route => route.fulfill({ json: { requests: [request] } }));
+    await page.route("**/api/requests/SMOKE1", route => route.fulfill({ json: { request } }));
+    let exportedId;
+    await page.route("**/api/bundle-import", route => {
+      exportedId = route.request().postDataJSON().requestId;
+      return route.fulfill({ contentType: "application/octet-stream", body: "test-download" });
+    });
+    await page.reload();
+    await page.getByRole("button", { name: "เปิดใน Adapter", exact: true }).click();
+    await page.getByRole("button", { name: /Export Import file/ }).click();
+    await page.waitForFunction(() => !Array.from(document.querySelectorAll("button")).some(b => b.textContent.includes("กำลังสร้างไฟล์")));
+    assert.equal(exportedId, "SMOKE1", "Reopening a request without auto rewards must retain its export history ID");
     assert.deepEqual(errors, []);
   } finally {
     if (browser) await browser.close();
