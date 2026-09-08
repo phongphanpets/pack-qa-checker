@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api-client";
 import { prepareBundleRows } from "@/lib/bundle-export-rows.mjs";
+import { expandBundleRewards } from "@/lib/bundle-rewards";
 
 import ItemCatalogCheck from "@/components/ItemCatalogCheck";
 import ProductExportPanel from "@/components/ProductExportPanel";
@@ -34,7 +35,7 @@ function numberOrNull(value: string) {
 }
 
 function manualBundles(name: string, price: string, limit: string, items: ManualItem[]): SpecBundle[] {
-  const usable = items.filter((item) => item.itemId.trim() && item.name.trim() && numberOrNull(item.amount) !== null);
+  const usable = items.filter((item) => item.itemId.trim() || item.name.trim());
   if (!name.trim() || !usable.length) return [];
   const fixedItems = usable.filter((item) => numberOrNull(item.chance) === null);
   const randomItems = usable.filter((item) => numberOrNull(item.chance) !== null);
@@ -42,7 +43,8 @@ function manualBundles(name: string, price: string, limit: string, items: Manual
   const mapItems = (source: ManualItem[]) => source.map((item) => ({
     item_id: item.itemId.trim(),
     name: item.name.trim(),
-    amount: numberOrNull(item.amount) || 1,
+    amount: numberOrNull(item.amount),
+    tier: item.tier,
     chance: numberOrNull(item.chance),
   }));
   if (!randomItems.length) return [{ ...base, name: name.trim(), is_gacha: false, items: mapItems(fixedItems) }];
@@ -51,27 +53,6 @@ function manualBundles(name: string, price: string, limit: string, items: Manual
     { ...base, name: name.trim() + " - Fixed", is_gacha: false, items: mapItems(fixedItems) },
     { ...base, name: name.trim() + " - Random", is_gacha: true, items: mapItems(randomItems) },
   ];
-}
-
-function expandParsedBundles(source: SpecBundle[]): SpecBundle[] {
-  return source.flatMap((bundle) => {
-    const fixedItems = bundle.items.filter((item) => item.chance == null);
-    const randomItems = bundle.items.filter((item) => item.chance != null);
-    const rewards = [
-      bundle.gsp_earn !== null && bundle.gsp_earn !== undefined && !bundle.items.some((item) => item.item_id?.toLowerCase() === "gsp")
-        ? { item_id: "GSP", name: "Golden Seed Point", amount: bundle.gsp_earn, chance: null }
-        : null,
-      bundle.player_exp !== null && bundle.player_exp !== undefined && !bundle.items.some((item) => item.item_id?.toLowerCase() === "player_exp")
-        ? { item_id: "PLAYER_EXP", name: "Player EXP", amount: bundle.player_exp, chance: null }
-        : null,
-    ].filter((item): item is { item_id: string; name: string; amount: number; chance: null } => item !== null);
-    const withBase = (name: string, items: typeof bundle.items, isGacha: boolean): SpecBundle => ({ ...bundle, name, is_gacha: isGacha, items });
-    if (!randomItems.length) return [withBase(bundle.name || "Bundle", [...fixedItems, ...rewards], false)];
-    return [
-      ...((fixedItems.length || rewards.length) ? [withBase((bundle.name || "Bundle") + " - Fixed", [...fixedItems, ...rewards], false)] : []),
-      withBase((bundle.name || "Bundle") + " - Random", randomItems, true),
-    ];
-  });
 }
 
 function ItemCodeContext({ details }: { details: Record<string, unknown> }) {
@@ -116,6 +97,7 @@ export default function ImportAdapterWorkspace() {
   const [exportError, setExportError] = useState("");
   const [exporting, setExporting] = useState(false);
   const [mirrorChance, setMirrorChance] = useState(true);
+  const [splitFiles, setSplitFiles] = useState(true);
 
   const rawParsedPaste = useMemo<ExcelPasteResult>(() => parseExcelPaste(pasteValue), [pasteValue]);
   const parsedPaste = useMemo<ExcelPasteResult>(() => applyBareBundleName(rawParsedPaste, bareBundleName), [rawParsedPaste, bareBundleName]);
@@ -123,25 +105,18 @@ export default function ImportAdapterWorkspace() {
   const rawParsedSheet = useMemo<ExcelPasteResult>(() => parseExcelPaste(selectedSheetText), [selectedSheetText]);
   const parsedSheet = useMemo<ExcelPasteResult>(() => applyBareBundleName(rawParsedSheet, bareBundleName), [rawParsedSheet, bareBundleName]);
   const manual = useMemo(() => manualBundles(bundleName, price, limit, items), [bundleName, price, limit, items]);
-  const autoFixedBundle = useMemo<SpecBundle | null>(() => autoRewards ? {
-    bundle_id: -1,
-    name: autoRewards.title + " - Fixed",
-    seed_point: autoRewards.seedPoint,
-    gsp_earn: autoRewards.seedPoint,
-    purchase_limit: autoRewards.purchaseLimit,
-    is_gacha: false,
-    is_permanent: false,
-    items: [
-      { item_id: "GSP", name: "Golden Seed Point", amount: autoRewards.seedPoint, chance: null },
-      { item_id: "PLAYER_EXP", name: "Player EXP", amount: autoRewards.playerExp, chance: null },
-    ],
-  } : null, [autoRewards]);
   const sourceResult = sourceMode === "paste" ? parsedPaste : sourceMode === "manual" ? null : parsedSheet;
   const parsedBundles = sourceMode === "paste" ? parsedPaste.bundles : sourceMode === "manual" ? manual : parsedSheet.bundles;
-  const bundles = autoFixedBundle ? [autoFixedBundle, ...parsedBundles] : sourceMode === "manual" ? parsedBundles : expandParsedBundles(parsedBundles);
+  const rewardSource = sourceMode === "manual" && autoRewards && parsedBundles.length
+    ? [{ ...parsedBundles[0], name: bundleName || autoRewards.title, items: parsedBundles.flatMap(bundle => bundle.items) }]
+    : parsedBundles;
+  const bundles = sourceMode === "manual" && !autoRewards ? parsedBundles : expandBundleRewards(rewardSource, autoRewards);
   const lockedCount = [...locked].filter((index) => index < bundles.length).length;
   const selectedCount = lockedCount || bundles.length;
   const exportReview = prepareBundleRows(bundles.filter((_, index) => lockedCount === 0 || locked.has(index)), { catalog, mirrorChance });
+  if (sourceMode === "manual") items.forEach((item, index) => {
+    if (item.chance.trim() && numberOrNull(item.chance) === null) exportReview.errors.push(`รายการ ${index + 1}: Chance ไม่ใช่ตัวเลข`);
+  });
 
   useEffect(() => {
     if (screen !== "adapter") return;
@@ -153,15 +128,16 @@ export default function ImportAdapterWorkspace() {
       setRequestType(request?.request_type === "ITEM_CODE" ? "ITEM_CODE" : request ? "WEB_SHOP" : null);
       setItemCodeDetails(request?.request_type === "ITEM_CODE" && request?.payload ? request.payload : null);
       const rewards = request?.payload?.auto_rewards;
-      if (rewards && rewards.golden_seed_point != null && rewards.player_exp != null) {
+      const requestSeed = numberOrNull(String(request?.payload?.seed_point ?? rewards?.golden_seed_point ?? ""));
+      if (request?.request_type === "WEB_SHOP" && requestSeed !== null) {
         setAutoRewards({
           title: request.title || "Product",
-          seedPoint: Number(rewards.golden_seed_point),
-          playerExp: Number(rewards.player_exp),
+          seedPoint: requestSeed,
+          playerExp: numberOrNull(String(rewards?.player_exp ?? "")) ?? requestSeed / 10,
           purchaseLimit: request?.payload?.purchase_limit === null ? null : Number(request?.payload?.purchase_limit),
         });
         setBundleName(request.title || "");
-        setPrice(String(rewards.golden_seed_point));
+        setPrice(String(requestSeed));
         setLimit(String(request?.payload?.purchase_limit ?? 1));
       } else {
         setAutoRewards(null);
@@ -244,11 +220,11 @@ export default function ImportAdapterWorkspace() {
     setExporting(true);
     try {
     const included = bundles.filter((_, index) => lockedCount === 0 || locked.has(index));
-    const filename = safeFilename(exportName || bundleName || included[0]?.name || "bundle-import") + ".xlsx";
+    const filename = safeFilename(exportName || bundleName || included[0]?.name || "bundle-import") + (splitFiles ? ".zip" : ".xlsx");
     const response = await apiFetch("/api/bundle-import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bundles: included, catalog, requestId, filename, mirrorChance }),
+      body: JSON.stringify({ bundles: included, catalog, requestId, filename, mirrorChance, splitFiles }),
     });
     if (!response.ok) { const error = await response.json(); throw new Error(error.error || "สร้างไฟล์จาก Bundle Import Template ไม่สำเร็จ"); }
     const blob = await response.blob();
@@ -295,6 +271,7 @@ export default function ImportAdapterWorkspace() {
           <div className="preview-summary"><span>{selectedCount} รายการพร้อมส่งต่อ</span><span>{bundles.filter((bundle) => bundle.is_gacha).length} Random</span></div>
           <div className="bundle-preview-list">{bundles.map((bundle, index) => <BundlePreview bundle={bundle} index={index} locked={locked.has(index)} onToggle={() => toggleLock(index)} key={bundle.name + "-" + index} />)}</div>
           <label><input type="checkbox" checked={mirrorChance} onChange={event => setMirrorChance(event.target.checked)} /> Chance / Secret Chance เท่ากัน</label>
+          <label>รูปแบบไฟล์ <select aria-label="รูปแบบไฟล์ Export" value={splitFiles ? "zip" : "xlsx"} onChange={event => setSplitFiles(event.target.value === "zip")}><option value="zip">แยก Excel ต่อ Bundle รวมเป็น ZIP</option><option value="xlsx">รวมทุก Bundle ใน Excel เดียว</option></select></label>
           {exportReview.errors.map((message, index) => <p className="hub-error" key={`error-${index}`}>{message}</p>)}
           {exportReview.warnings.map((message, index) => <p className="source-warning" key={`warning-${index}`}>{message}</p>)}
           <button type="button" className="primary-button" disabled={exporting || exportReview.errors.length > 0} onClick={() => void downloadImport()}>{exporting ? "กำลังสร้างไฟล์..." : `Export Import file (${selectedCount})`}</button>

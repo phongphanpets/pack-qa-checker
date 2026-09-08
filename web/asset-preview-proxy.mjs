@@ -155,14 +155,29 @@ async function handleBundleImport(req, res) {
     const body = await readJsonBody(req);
     const bundles = Array.isArray(body.bundles) ? body.bundles : [];
     if (!bundles.length) throw new Error("ไม่พบ Bundle สำหรับ Export");
-    const file = await buildBundleImportFromTemplate(bundles, Array.isArray(body.catalog) ? body.catalog : [], body.mirrorChance === true);
-    await saveRequestExport(body.requestId, body.filename, "BUNDLE_IMPORT", file, {
+    const catalog = Array.isArray(body.catalog) ? body.catalog : [];
+    const review = prepareBundleRows(bundles, { catalog, mirrorChance: body.mirrorChance === true });
+    if (review.errors.length) throw new Error(review.errors.join("\n"));
+    const split = body.splitFiles === true;
+    let file;
+    if (split) {
+      const entries = new Map();
+      for (const [index, bundle] of bundles.entries()) {
+        const filename = `${String(index + 1).padStart(3, "0")}-${safeExportFilename(bundle.name).replace(/[. ]+$/, "")}.xlsx`;
+        entries.set(filename, await buildBundleImportFromTemplate([bundle], catalog, body.mirrorChance === true));
+      }
+      file = writeZipEntries(entries);
+    } else file = await buildBundleImportFromTemplate(bundles, catalog, body.mirrorChance === true);
+    const extension = split ? ".zip" : ".xlsx";
+    const filename = safeExportFilename(body.filename || "bundle-import").replace(/\.(?:xlsx|zip)$/i, "") + extension;
+    await saveRequestExport(body.requestId, filename, split ? "BUNDLE_IMPORT_ZIP" : "BUNDLE_IMPORT", file, {
+      extension,
       bundle_count: bundles.length,
       item_count: bundles.reduce((total, bundle) => total + (Array.isArray(bundle.items) ? bundle.items.length : 0), 0),
     });
     res.writeHead(200, {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": "attachment; filename=\"bundle-import.xlsx\"",
+      "Content-Type": split ? "application/zip" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename="bundle-import${extension}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       "Content-Length": file.length,
       "Cache-Control": "no-store",
     });
@@ -352,7 +367,7 @@ function writeZipEntries(entries) {
     const localEntry = Buffer.alloc(30 + nameBytes.length + bytes.length);
     localEntry.writeUInt32LE(0x04034b50, 0);
     localEntry.writeUInt16LE(20, 4);
-    localEntry.writeUInt16LE(0, 6);
+    localEntry.writeUInt16LE(0x800, 6);
     localEntry.writeUInt16LE(0, 8);
     localEntry.writeUInt32LE(crc, 14);
     localEntry.writeUInt32LE(bytes.length, 18);
@@ -367,7 +382,7 @@ function writeZipEntries(entries) {
     centralEntry.writeUInt32LE(0x02014b50, 0);
     centralEntry.writeUInt16LE(20, 4);
     centralEntry.writeUInt16LE(20, 6);
-    centralEntry.writeUInt16LE(0, 8);
+    centralEntry.writeUInt16LE(0x800, 8);
     centralEntry.writeUInt16LE(0, 10);
     centralEntry.writeUInt32LE(crc, 16);
     centralEntry.writeUInt32LE(bytes.length, 20);
@@ -530,7 +545,8 @@ async function persistRequestExport(requestId, filename, type, contents, details
   if (!/^[A-Z0-9]+$/i.test(requestId)) throw new Error("Invalid request ID");
   const directory = resolve(dataRoot, "request_exports", requestId);
   await mkdir(directory, { recursive: true });
-  await writeFile(resolve(directory, `${artifactId}.xlsx`), contents);
+  const extension = type === "BUNDLE_IMPORT_ZIP" ? ".zip" : ".xlsx";
+  await writeFile(resolve(directory, `${artifactId}${extension}`), contents);
   const exports = Array.isArray(entry.payload?.exports) ? entry.payload.exports : [];
   exports.unshift({ id: artifactId, filename: safeName, type, created_at: new Date().toISOString(), ...details });
   entry.payload = { ...entry.payload, exports };
@@ -548,11 +564,12 @@ function sendRequestExport(res, requests, requestId, exportId) {
   const entry = requests.find((item) => item.id === requestId);
   const artifact = Array.isArray(entry?.payload?.exports) ? entry.payload.exports.find((item) => item?.id === exportId) : null;
   if (!artifact) return json(res, 404, { error: "ไม่พบไฟล์ Export" });
-  const filePath = resolve(dataRoot, "request_exports", requestId, `${exportId}.xlsx`);
+  const extension = artifact.type === "BUNDLE_IMPORT_ZIP" ? ".zip" : ".xlsx";
+  const filePath = resolve(dataRoot, "request_exports", requestId, `${exportId}${extension}`);
   if (!filePath.startsWith(resolve(dataRoot, "request_exports") + sep) || !existsSync(filePath)) return json(res, 404, { error: "ไม่พบไฟล์ Export" });
   res.writeHead(200, {
-    "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Content-Disposition": `attachment; filename="${safeExportFilename(artifact.filename)}"`,
+    "Content-Type": extension === ".zip" ? "application/zip" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "Content-Disposition": `attachment; filename="export${extension}"; filename*=UTF-8''${encodeURIComponent(safeExportFilename(artifact.filename))}`,
     "Content-Length": statSync(filePath).size,
     "Cache-Control": "no-store",
   });

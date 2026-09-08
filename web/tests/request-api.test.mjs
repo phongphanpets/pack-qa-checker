@@ -61,6 +61,31 @@ test("shared API persists concurrent intake, timelines and identical downloads a
     assert.deepEqual(rateRows[2].slice(6, 9), ["2", "99.75", "99.75"]);
     const invalid = await fetch(endpoint + "/api/bundle-import", { method: "POST", headers, body: JSON.stringify({ bundles: [{ name: "Missing rate", is_gacha: true, items: [{ item_id: "51201", amount: 1, chance: null }] }] }) });
     assert.equal(invalid.status, 400);
+    const zipResponse = await post("/api/bundle-import", { requestId: created[1].id, filename: "ชุดทดสอบ.zip", splitFiles: true, bundles: [
+      { name: "แพ็ค / หนึ่ง", items: [{ item_id: "52001", amount: 2 }] },
+      { name: "แพ็ค : หนึ่ง", items: [{ item_id: "52002", amount: 3 }] },
+    ] });
+    assert.equal(zipResponse.headers.get("content-type"), "application/zip");
+    const zipBytes = Buffer.from(await zipResponse.arrayBuffer());
+    let offset = 0;
+    const zipNames = [];
+    while (zipBytes.readUInt32LE(offset) === 0x04034b50) {
+      assert.equal(zipBytes.readUInt16LE(offset + 6) & 0x800, 0x800);
+      const size = zipBytes.readUInt32LE(offset + 18);
+      const nameSize = zipBytes.readUInt16LE(offset + 26);
+      const extraSize = zipBytes.readUInt16LE(offset + 28);
+      zipNames.push(zipBytes.subarray(offset + 30, offset + 30 + nameSize).toString("utf8"));
+      const start = offset + 30 + nameSize + extraSize;
+      const inner = zipBytes.subarray(start, start + size);
+      const innerResponse = await post("/api/read-spreadsheet", { name: "inner.xlsx", data_url: "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + inner.toString("base64") });
+      const lines = (await innerResponse.json()).tabs[0].text.trim().split(/\r?\n/);
+      assert.equal(lines.length, 2, "One bundle with one item per workbook");
+      assert.ok(lines[1].includes(zipNames.length === 1 ? "52001" : "52002"));
+      offset = start + size;
+    }
+    assert.equal(zipNames.length, 2);
+    assert.notEqual(zipNames[0], zipNames[1], "Sanitized filename collisions must not drop a bundle");
+    assert.ok(zipNames[0].includes("แพ็ค"));
     await stop();
     await start();
     const all = await (await fetch(endpoint + "/api/requests", { headers })).json();
@@ -71,5 +96,11 @@ test("shared API persists concurrent intake, timelines and identical downloads a
     assert.deepEqual(saved.history.map(event => event.type), ["CREATED", "STATUS_CHANGED", "EXPORTED", "STATUS_CHANGED"]);
     const download = await fetch(endpoint + `/api/requests/${id}/exports/${saved.payload.exports[0].id}`, { headers });
     assert.deepEqual(Buffer.from(await download.arrayBuffer()), bytes);
+    const zippedRequest = (await (await fetch(endpoint + `/api/requests/${created[1].id}`, { headers })).json()).request;
+    const zipDownload = await fetch(endpoint + `/api/requests/${created[1].id}/exports/${zippedRequest.payload.exports[0].id}`, { headers });
+    assert.equal(zipDownload.status, 200);
+    assert.equal(zipDownload.headers.get("content-type"), "application/zip");
+    assert.ok(zipDownload.headers.get("content-disposition").includes("filename*=UTF-8''"));
+    assert.deepEqual(Buffer.from(await zipDownload.arrayBuffer()), zipBytes);
   } finally { await stop(); }
 });
