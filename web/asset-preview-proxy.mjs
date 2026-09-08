@@ -4,6 +4,7 @@ import { createServer, request as proxyRequest } from "node:http";
 import { extname, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
 import { inflateRawSync } from "node:zlib";
+import { recordRequestEvent, changeRequestStatus } from "./lib/request-events.mjs";
 
 const port = Number(process.env.PORT ?? 3003);
 const upstreamPort = Number(process.env.PACK_QA_UPSTREAM_PORT ?? 3005);
@@ -449,6 +450,7 @@ async function handleRequestHub(req, res) {
     if (req.method === "POST" && !requestId) {
       const body = await readJsonBody(req);
       const entry = createRequest(body);
+      recordRequestEvent(entry, "CREATED", { to: entry.status }, entry.created_at);
       const notificationStatus = await notifyDiscord(entry, "New import request");
       entry.notification_status = notificationStatus;
       requests.unshift(entry);
@@ -460,8 +462,7 @@ async function handleRequestHub(req, res) {
       const entry = requests.find((item) => item.id === requestId);
       if (!entry) return json(res, 404, { error: "Request not found" });
       if (!validStatuses.has(body.status)) return json(res, 400, { error: "invalid request status" });
-      entry.status = body.status;
-      entry.updated_at = new Date().toISOString();
+      if (!changeRequestStatus(entry, body.status)) return json(res, 200, { request: entry });
       entry.notification_status = await notifyDiscord(entry, "Import request status updated");
       await writeRequests(requests);
       return json(res, 200, { request: entry });
@@ -525,9 +526,10 @@ async function saveRequestExport(requestId, filename, type, contents, details) {
   const exports = Array.isArray(entry.payload?.exports) ? entry.payload.exports : [];
   exports.unshift({ id: artifactId, filename: safeName, type, created_at: new Date().toISOString(), ...details });
   entry.payload = { ...entry.payload, exports };
+  recordRequestEvent(entry, "EXPORTED", { filename: safeName, artifact_id: artifactId, export_type: type });
   const becomesReady = entry.request_type === "ITEM_CODE" || type === "PRODUCT_IMPORT";
   if (becomesReady && entry.status !== "READY_TO_IMPORT") {
-    entry.status = "READY_TO_IMPORT";
+    changeRequestStatus(entry, "READY_TO_IMPORT");
     entry.notification_status = await notifyDiscord(entry, "Import files ready");
   }
   entry.updated_at = new Date().toISOString();

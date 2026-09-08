@@ -21,6 +21,7 @@ type HubRequest = {
   created_at: string;
   updated_at: string;
   notification_status: string;
+  history?: Array<{ type: string; at: string; from?: RequestStatus; to?: RequestStatus; filename?: string }>;
   source_text?: string;
   attachments?: Array<{ name: string; type: string; data_url?: string }>;
   payload: Record<string, unknown>;
@@ -346,8 +347,11 @@ function DecisionCard({ active, title, detail, onClick }: { active: boolean; tit
 
 function RequestArtifacts({ request }: { request: HubRequest }) {
   const exports = Array.isArray(request.payload.exports) ? request.payload.exports.filter((item): item is { id: string; filename: string; type: string } => Boolean(item && typeof item === "object" && "id" in item && "filename" in item)) : [];
-  if (!exports.length) return null;
-  return <div className="request-artifacts">{exports.slice(0, 2).map((artifact) => <a key={artifact.id} href={API + "/requests/" + encodeURIComponent(request.id) + "/exports/" + encodeURIComponent(artifact.id)}>{artifact.type === "PRODUCT_IMPORT" ? "Product" : "Bundle"}: {artifact.filename}</a>)}</div>;
+  return <details className="request-artifacts"><summary>ประวัติและไฟล์ ({exports.length})</summary>
+    {exports.map((artifact) => <a key={artifact.id} href={API + "/requests/" + encodeURIComponent(request.id) + "/exports/" + encodeURIComponent(artifact.id)}>{artifact.type === "PRODUCT_IMPORT" ? "Product" : "Bundle"}: {artifact.filename}</a>)}
+    <ol>{(request.history || []).map((event, index) => <li key={index}><time>{new Date(event.at).toLocaleString("th-TH")}</time>{" · "}{event.type === "EXPORTED" ? "Export " + event.filename : event.type === "CREATED" ? "สร้าง Request" : `${event.from ? labels[event.from] || event.from : ""} → ${event.to ? labels[event.to] || event.to : ""}`}</li>)}</ol>
+    {!request.history?.length && <p>ยังไม่มีประวัติการเปลี่ยนสถานะที่บันทึกไว้</p>}
+  </details>;
 }
 
 function readAttachment(file: File): Promise<{ name: string; type: string; data_url: string }> {

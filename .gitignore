@@ -32,6 +32,7 @@ web/node_modules/
 web/.next/
 web/.vinext/
 web/dist/
+web/dist-pages/
 web/build/
 web/out/
 web/.wrangler/
