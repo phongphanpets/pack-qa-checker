@@ -221,6 +221,12 @@ test("reads GSP Earn and EXP Rank Earn from the bundle summary row", () => {
   assert.equal(result.bundles[0].player_exp, 99);
 });
 
+test("preserves fractional Seed Point, GSP and Player EXP", () => {
+  const result = parseExcelPaste("Product Name\tDecimal rewards\n0\tTHB\tSeed Point\tGSP Earn\tEXP Rank Earn\tIMG\tItem ID\tItem Name\tAmt\n1\t59.5\t595\t595\t59.5\t\t51201\tLanistar Key\t1");
+  assert.equal(result.bundles[0].gsp_earn, 595);
+  assert.equal(result.bundles[0].player_exp, 59.5);
+});
+
 test("recognizes Cost Chance as a random chance column", () => {
   const result = parseExcelPaste(
     `Bundle Name\tWheel Rewards

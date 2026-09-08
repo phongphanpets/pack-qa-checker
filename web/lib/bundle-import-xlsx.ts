@@ -1,7 +1,8 @@
 import type { SpecBundle } from "@/lib/website-ocr";
+import { bundleHeaders, prepareBundleRows } from "./bundle-export-rows.mjs";
 
 // The importer matches these labels exactly. Keep them aligned with Bundle Import Template (3).
-export const bundleImportHeaders = ["Bundle Name", "Bundle Type", "Item Type", "Item ID", "Quantity", "Tier", "Position", "เรทสุ่ม", "เรทโชว์"];
+export const bundleImportHeaders = bundleHeaders;
 
 export function downloadBundleImportXlsx(bundles: SpecBundle[], filename = "bundle-import.xlsx") {
   const blob = new Blob([createBundleImportXlsx(bundles)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -20,22 +21,9 @@ export function createSimpleXlsx(headers: string[], rows: Array<Array<string | n
 }
 
 export function toImportRows(bundles: SpecBundle[]): Array<Array<string | number | null>> {
-  return bundles.flatMap((bundle) => bundle.items.map((item, index) => {
-    const source = exportItem(item.item_id);
-    return [bundle.name || "Bundle", bundle.is_gacha ? "RANDOM" : "FIXED", source.type, source.id, item.amount, "Trainee", index + 1, bundle.is_gacha ? item.chance : null, null];
-  }));
-}
-
-function exportItem(value: string) {
-  const normalized = value.trim().toLowerCase().replace(/\s+/g, "_");
-  if (normalized === "gsp") return { type: "WALLET_DEBIT", id: "Golden Seed Point" };
-  if (normalized === "player_exp") return { type: "PLAYER_EXPERIENCE", id: "Player Experience - tosm" };
-  if (normalized === "popo_god_1") return { type: "WALLET_DEBIT", id: "God Coin" };
-  if (normalized === "popo_fellow_1") return { type: "WALLET_DEBIT", id: "Fellow Coin" };
-  if (normalized === "popo_kupo_1") return { type: "WALLET_DEBIT", id: "Kupole Coin" };
-  if (normalized === "gold_cur" || normalized === "currency") return { type: "ITEM", id: "101147" };
-  if (normalized === "diamond_cur") return { type: "ITEM", id: "101146" };
-  return { type: "ITEM", id: value };
+  const { rows, errors } = prepareBundleRows(bundles);
+  if (errors.length) throw new Error(errors.join("\n"));
+  return rows;
 }
 
 function xlsxFile(rows: Array<Array<string | number | null>>, sheetName: string) {

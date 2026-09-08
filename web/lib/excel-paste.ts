@@ -186,9 +186,9 @@ function parseBundleSection(
     warnings.push({ code: "DATE_WITHOUT_YEAR", message: `วันที่ของ ${name} ไม่มีปี จึงยังไม่ใช้ตัดสินผล เพื่อป้องกันระบบเดาปีผิด` });
   }
 
-  const seedPoint = integer(seedPointCell?.value);
-  const gspEarn = integer(gspCell?.value);
-  const playerExp = integer(playerExpCell?.value);
+  const seedPoint = decimal(seedPointCell?.value);
+  const gspEarn = decimal(gspCell?.value);
+  const playerExp = decimal(playerExpCell?.value);
   const purchaseLimit = integer(limitCell?.value);
   const valid = bundleId !== null && Boolean(name) && items.length > 0 && items.every((item) => Boolean(clean(item.itemId.value)));
   const documentItems = items.map((item) => ({

@@ -5,6 +5,7 @@ import { extname, resolve, sep } from "node:path";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { inflateRawSync } from "node:zlib";
 import { recordRequestEvent, changeRequestStatus } from "./lib/request-events.mjs";
+import { prepareBundleRows } from "./lib/bundle-export-rows.mjs";
 
 const port = Number(process.env.PORT ?? 3003);
 const upstreamPort = Number(process.env.PACK_QA_UPSTREAM_PORT ?? 3005);
@@ -154,7 +155,7 @@ async function handleBundleImport(req, res) {
     const body = await readJsonBody(req);
     const bundles = Array.isArray(body.bundles) ? body.bundles : [];
     if (!bundles.length) throw new Error("ไม่พบ Bundle สำหรับ Export");
-    const file = await buildBundleImportFromTemplate(bundles, Array.isArray(body.catalog) ? body.catalog : []);
+    const file = await buildBundleImportFromTemplate(bundles, Array.isArray(body.catalog) ? body.catalog : [], body.mirrorChance === true);
     await saveRequestExport(body.requestId, body.filename, "BUNDLE_IMPORT", file, {
       bundle_count: bundles.length,
       item_count: bundles.reduce((total, bundle) => total + (Array.isArray(bundle.items) ? bundle.items.length : 0), 0),
@@ -194,7 +195,7 @@ async function handleProductImport(req, res) {
   }
 }
 
-async function buildBundleImportFromTemplate(bundles, catalog) {
+async function buildBundleImportFromTemplate(bundles, catalog, mirrorChance = false) {
   if (!existsSync(bundleTemplatePath)) throw new Error("ไม่พบ Bundle Import Template ในโปรแกรม");
   const archive = readZipEntries(await readFile(bundleTemplatePath));
   const stringsXml = archive.get("xl/sharedStrings.xml")?.toString("utf8");
@@ -211,21 +212,8 @@ async function buildBundleImportFromTemplate(bundles, catalog) {
     stringIndex.set(text, index);
     return index;
   };
-  const catalogById = new Map(catalog.map((item) => [normalizeCatalogId(item?.id), item]));
-  const rows = bundles.flatMap((bundle) => (Array.isArray(bundle.items) ? bundle.items : []).map((item, index) => {
-    const reward = importReward(item?.item_id);
-    return [
-      String(bundle?.name || "Bundle"),
-      bundle?.is_gacha ? "RANDOM" : "FIXED",
-      reward.type,
-      reward.id,
-      numberValue(item?.amount),
-      tierForItem(item?.item_id, reward.id, catalogById),
-      index + 1,
-      bundle?.is_gacha ? numberValue(item?.chance) : null,
-      null,
-    ];
-  }));
+  const { rows, errors } = prepareBundleRows(bundles, { catalog, mirrorChance });
+  if (errors.length) throw new Error(errors.join("\n"));
   if (!rows.length) throw new Error("Bundle ที่เลือกไม่มี Item");
   const header = sheetXml.match(/<row r="1"[\s\S]*?<\/row>/)?.[0];
   if (!header) throw new Error("อ่านหัวตาราง Template ไม่สำเร็จ");
@@ -233,12 +221,6 @@ async function buildBundleImportFromTemplate(bundles, catalog) {
   archive.set("xl/worksheets/sheet1.xml", Buffer.from(sheetXml.replace(/<sheetData>[\s\S]*?<\/sheetData>/, `<sheetData>${header}${outputRows}</sheetData>`), "utf8"));
   archive.set("xl/sharedStrings.xml", Buffer.from(sharedStringsXml(stringsXml, strings), "utf8"));
   return writeZipEntries(archive);
-}
-
-function normalizeCatalogId(value) { return String(value || "").trim().toLowerCase().replace(/\s+/g, ""); }
-function tierForItem(originalId, importedId, catalogById) {
-  const record = catalogById.get(normalizeCatalogId(importedId)) || catalogById.get(normalizeCatalogId(originalId));
-  return String(record?.tier || "").trim() || "Trainee";
 }
 
 async function buildProductImportFromTemplate(draft) {
@@ -275,24 +257,6 @@ async function buildProductImportFromTemplate(draft) {
 function dateForTemplate(value) {
   const text = String(value || "").trim();
   return text ? `${text.replace("T", " ")}:00` : "";
-}
-
-function importReward(value) {
-  const source = String(value || "");
-  const normalized = source.trim().toLowerCase().replace(/\s+/g, "_");
-  if (normalized === "gsp") return { type: "WALLET_DEBIT", id: "Golden Seed Point" };
-  if (normalized === "player_exp") return { type: "PLAYER_EXPERIENCE", id: "Player Experience - tosm" };
-  if (normalized === "popo_god_1") return { type: "WALLET_DEBIT", id: "God Coin" };
-  if (normalized === "popo_fellow_1") return { type: "WALLET_DEBIT", id: "Fellow Coin" };
-  if (normalized === "popo_kupo_1") return { type: "WALLET_DEBIT", id: "Kupole Coin" };
-  if (normalized === "gold_cur" || normalized === "currency") return { type: "ITEM", id: "101147" };
-  if (normalized === "diamond_cur") return { type: "ITEM", id: "101146" };
-  return { type: "ITEM", id: source };
-}
-
-function numberValue(value) {
-  const parsed = Number(String(value ?? "").replace(/,/g, "").trim());
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function templateRowXml(row, values, addString) {

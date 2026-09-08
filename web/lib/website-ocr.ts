@@ -5,6 +5,8 @@ export type SpecItem = {
   name: string | null;
   amount: number | null;
   chance?: number | null;
+  secret_chance?: number | null;
+  tier?: string;
 };
 
 export type SpecBundle = {

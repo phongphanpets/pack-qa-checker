@@ -52,6 +52,15 @@ test("shared API persists concurrent intake, timelines and identical downloads a
     assert.equal(bytes.subarray(0, 2).toString(), "PK");
     const spreadsheet = await post("/api/read-spreadsheet", { name: "verified.xlsx", data_url: "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + bytes.toString("base64") });
     assert.ok((await spreadsheet.json()).tabs[0].text.includes("Verified"));
+    const randomFile = await post("/api/bundle-import", { mirrorChance: true, bundles: [{ name: "Rate check", is_gacha: true, items: [{ item_id: "51201", amount: 3, chance: 0.25 }, { item_id: "51201", amount: 1, chance: 99.75 }] }] });
+    const rateBytes = Buffer.from(await randomFile.arrayBuffer());
+    const rateSheet = await post("/api/read-spreadsheet", { name: "rates.xlsx", data_url: "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + rateBytes.toString("base64") });
+    const rateRows = (await rateSheet.json()).tabs[0].text.trim().split(/\r?\n/).map(line => line.split("\t"));
+    assert.deepEqual(rateRows[0].slice(0, 9), ["Bundle Name", "Bundle Type", "Item Type", "Item ID", "Quantity", "Tier", "Position", "เรทสุ่ม", "เรทโชว์"]);
+    assert.deepEqual(rateRows[1].slice(6, 9), ["1", "0.25", "0.25"]);
+    assert.deepEqual(rateRows[2].slice(6, 9), ["2", "99.75", "99.75"]);
+    const invalid = await fetch(endpoint + "/api/bundle-import", { method: "POST", headers, body: JSON.stringify({ bundles: [{ name: "Missing rate", is_gacha: true, items: [{ item_id: "51201", amount: 1, chance: null }] }] }) });
+    assert.equal(invalid.status, 400);
     await stop();
     await start();
     const all = await (await fetch(endpoint + "/api/requests", { headers })).json();
