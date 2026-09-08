@@ -1,0 +1,165 @@
+# Manual transcription from the real workbook tab "ดาว 225 TOSM".
+# The workbook is an approval document: metadata is stored in cells, while
+# Spec/Admin/Website/Receipt evidence is stored as embedded screenshots.
+dataset: "ดาว 225 TOSM"
+source_workbook: "Approve งาน GM (4).xlsx"
+source_sheet: "ดาว 225 TOSM"
+transcription: manual
+
+bundles:
+  - bundle_id: 113711
+    spec:
+      bundle_id:
+        value: 113711
+        source: spec
+        raw_text: "113711"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!A26"
+      name:
+        value: "เสว Sun : จุ่มเจเนต (ลด 40 %)"
+        raw_text: "เสว Sun : จุ่มเจเนต (ลด 40 %)"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!A23"
+      seed_point:
+        value: 590
+        raw_text: "590"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:Seed Point"
+      gsp_earn:
+        value: 590
+        raw_text: "590"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:GSP Earn"
+      purchase_limit:
+        value: 10
+        raw_text: "10"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:Limit"
+      start_date:
+        value: 2026-05-24
+        raw_text: "24 May 00.01 น."
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:Start"
+      end_date:
+        value: 2026-05-26
+        raw_text: "26 May 23.59 น."
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:End"
+      reset_type:
+        value: "No Reset"
+        raw_text: "No Reset"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:Reset"
+      items:
+        - item_id:
+            value: "Web-Currency"
+            raw_text: "Web-Currency"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:row 1"
+          name: "Fellow Coin"
+          amount: 1
+        - item_id:
+            value: "1315001"
+            raw_text: "1315001"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:row 2"
+          name: "Fellow Ticket"
+          amount: 1
+        - item_id:
+            value: "Currency"
+            raw_text: "Currency"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:row 3"
+          name: "Gold"
+          amount: 10
+
+    admin:
+      bundle_id:
+        value: 113711
+        source: spec
+        raw_text: "113711"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!A26"
+      name:
+        value: "เสว Sun : จุ่มเจเนต (ลด 40 %)"
+        raw_text: "เสว Sun : จุ่มเจเนต (ลด 40 %)"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1041.png:name"
+      start_date:
+        value: 2026-05-24
+        raw_text: "May 24, 2026 12:01 AM"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1041.png:start"
+      end_date:
+        value: 2026-05-26
+        raw_text: "May 26, 2026 11:59 PM"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1041.png:end"
+
+    website:
+      bundle_id:
+        value: 113711
+        source: spec
+        raw_text: "113711"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!A26"
+      name:
+        value: "เสว Sun : จุ่มเจเนต (ลด 40 %)"
+        raw_text: "เสว Sun : จุ่มเจเนต (ลด 40 %)"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:name"
+      seed_point:
+        value: 590
+        raw_text: "590 SP"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:price"
+      gsp_earn:
+        value: 590
+        raw_text: "Golden Seed Point x590"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:bonus"
+      purchase_limit:
+        value: 10
+        raw_text: "10 ครั้ง"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:purchase condition"
+      items:
+        - item_id:
+            value: "Web-Currency"
+            source: spec
+            raw_text: "Web-Currency (resolved from Fellow Coin)"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:row 1"
+          name:
+            value: "Fellow Coin"
+            raw_text: "Fellow Coin"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 3"
+          amount:
+            value: 1
+            raw_text: "x1"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 3"
+        - item_id:
+            value: "1315001"
+            source: spec
+            raw_text: "1315001 (resolved from Fellow Ticket)"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:row 2"
+          name:
+            value: "Fellow Ticket"
+            raw_text: "Fellow Ticket"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 2"
+          amount:
+            value: 1
+            raw_text: "x1"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 2"
+        - item_id:
+            value: "Currency"
+            source: spec
+            raw_text: "Currency (resolved from Gold)"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1064.png:row 3"
+          name:
+            value: "Gold"
+            raw_text: "Gold"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 1"
+          amount:
+            value: 10
+            raw_text: "x10"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 1"
+
+    receipt:
+      bundle_id:
+        value: 113711
+        source: spec
+        raw_text: "113711"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!A26"
+      items:
+        - item_id:
+            value: "Web-Currency"
+            raw_text: "Fellow Coin icon, manually confirmed"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1071.png"
+        - item_id:
+            value: "1315001"
+            raw_text: "Fellow Ticket icon, manually confirmed"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1111.png"
+        - item_id:
+            value: "Currency"
+            raw_text: "Gold x10 icon, manually confirmed"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1079.png"

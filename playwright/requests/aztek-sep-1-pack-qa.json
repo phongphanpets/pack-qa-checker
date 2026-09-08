@@ -1,0 +1,45 @@
+{
+  "adminUrl": "https://aztek-tools-v2.exe.in.th",
+  "sourceSpec": "Google Sheet: ปอ 1/9 - TOSM",
+  "googleSheet": {
+    "spreadsheetId": "1k-US_o_qg27lxdnVrqAze650VNc-plyBk8uY9HkA4HA",
+    "gid": "1091406992"
+  },
+  "verifiedPacks": [
+    {
+      "name": "เสวเบา ๆ : Skibidi",
+      "price": 290,
+      "purchaseLimit": 1,
+      "bundleIds": [115167],
+      "startsAt": "01 Sep 2026 18:00:00",
+      "endsAt": "03 Sep 2026 23:59:59"
+    },
+    {
+      "name": "เสวเบา ๆ : ขึ้นเขาระเบิด",
+      "price": 490,
+      "purchaseLimit": 5,
+      "bundleIds": [115168],
+      "startsAt": "01 Sep 2026 18:00:00",
+      "endsAt": "03 Sep 2026 23:59:59"
+    },
+    {
+      "name": "เสวเบา ๆ : ติดหวาน 79%",
+      "price": 790,
+      "purchaseLimit": 5,
+      "bundleIds": [115169],
+      "startsAt": "01 Sep 2026 18:00:00",
+      "endsAt": "03 Sep 2026 23:59:59"
+    }
+  ],
+  "manualReview": [
+    {
+      "name": "เสวเบา ๆ : ติดหวาน 99%",
+      "bundleIds": [115170, 115171],
+      "reason": "ใน Sheet ยังไม่มีหลักฐาน Product, Popup, Reward และ Admin ของแพ็กนี้ครบชุด"
+    },
+    {
+      "name": "เสวเบา ๆ : ติดหวาน 79%",
+      "reason": "ต้องยืนยันหรือเปลี่ยนหลักฐาน Rate เพราะหัวข้อในหลักฐานระบุแพ็ก Random 99%"
+    }
+  ]
+}

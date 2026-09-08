@@ -1,0 +1,57 @@
+# Provider-independent OCR observation transcribed from the Website screenshot.
+# Item IDs are intentionally absent because the Website UI does not show them;
+# the adapter resolves unique exact names against Spec and records source=spec.
+bundles:
+  - bundle_id: 113711
+    website:
+      name:
+        value: "เสว Sun : จุ่มเจเนต (ลด 40 %)"
+        confidence: 0.98
+        raw_text: "เสว Sun : จุ่มเจเนต (ลด 40 %)"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:name"
+      seed_point:
+        value: "590"
+        confidence: 0.99
+        raw_text: "590 SP"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:price"
+      gsp_earn:
+        value: "x590"
+        confidence: 0.98
+        raw_text: "Golden Seed Point x590"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:bonus"
+      purchase_limit:
+        value: "10"
+        confidence: 0.99
+        raw_text: "10 ครั้ง"
+        locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:purchase condition"
+      items:
+        - name:
+            value: "Gold"
+            confidence: 0.99
+            raw_text: "Gold"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 1"
+          amount:
+            value: "x10"
+            confidence: 0.99
+            raw_text: "x10"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 1"
+        - name:
+            value: "Fellow Ticket"
+            confidence: 0.98
+            raw_text: "Fellow Ticket"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 2"
+          amount:
+            value: "x1"
+            confidence: 0.99
+            raw_text: "x1"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 2"
+        - name:
+            value: "Fellow Coin"
+            confidence: 0.98
+            raw_text: "Fellow Coin"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 3"
+          amount:
+            value: "x1"
+            confidence: 0.99
+            raw_text: "x1"
+            locator: "Approve งาน GM (4).xlsx#ดาว 225 TOSM!/xl/media/image1070.png:item 3"

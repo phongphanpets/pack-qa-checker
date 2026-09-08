@@ -1,0 +1,20 @@
+failures:
+  - bundle_id: 990101
+    rule_id: PACK_NAME_ADMIN
+    field: admin.name
+    source: admin
+    expected: "Correct Pack Name"
+    actual: "Name Copied From Another Pack"
+    status: FAIL
+    severity: LOW
+    actual_locator: "synthetic admin name field"
+
+  - bundle_id: 990102
+    rule_id: PURCHASE_LIMIT_WEBSITE
+    field: website.purchase_limit
+    source: website
+    expected: 1
+    actual: 10
+    status: FAIL
+    severity: HIGH
+    actual_locator: "synthetic website purchase limit"

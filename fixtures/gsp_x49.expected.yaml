@@ -1,0 +1,9 @@
+failures:
+  - bundle_id: 990049
+    rule_id: GSP_EQ_SEED
+    field: website.gsp_earn
+    source: website
+    expected: 490
+    actual: 49
+    status: FAIL
+    severity: HIGH

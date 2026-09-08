@@ -1,0 +1,202 @@
+# Synthetic reconstruction of the seven-pack "ดาว 167 - TOSM" answer key.
+# The original xlsx mentioned in the hand-off is not present in this workspace.
+# Bundle 114434 preserves the known real defect: Aura Black is 3 in Spec and
+# 2 on Website.  The other values exist only to exercise the agreed rules.
+dataset: "ดาว 167 - TOSM"
+synthetic_reconstruction: true
+
+bundles:
+  - bundle_id: 114432
+    spec:
+      name: "ดาว 167 Pack 1"
+      seed_point: 100
+      gsp_earn: 100
+      purchase_limit: 1
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+      reset_type: none
+      items:
+        - {item_id: ITEM-01, name: "Normal Item 1", amount: 1}
+    admin:
+      name: "ดาว 167 Pack 1"
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+    website:
+      name: "ดาว 167 Pack 1"
+      seed_point: 100
+      gsp_earn: 100
+      purchase_limit: 1
+      items:
+        - {item_id: ITEM-01, name: "Normal Item 1", amount: 1}
+    receipt:
+      items:
+        - {item_id: ITEM-01}
+
+  - bundle_id: 114433
+    spec:
+      name: "ดาว 167 Pack 2"
+      seed_point: 200
+      gsp_earn: 200
+      purchase_limit: 2
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+      reset_type: none
+      items:
+        - {item_id: ITEM-02, name: "Normal Item 2", amount: 2}
+    admin:
+      name: "ดาว 167 Pack 2"
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+    website:
+      name: "ดาว 167 Pack 2"
+      seed_point: 200
+      gsp_earn: 200
+      purchase_limit: 2
+      items:
+        - {item_id: ITEM-02, name: "Normal Item 2", amount: 2}
+    receipt:
+      items:
+        - {item_id: ITEM-02}
+
+  - bundle_id: 114434
+    spec:
+      name: "[TIP] Aura Black"
+      seed_point: 300
+      gsp_earn: 300
+      purchase_limit: 1
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+      reset_type: none
+      items:
+        - {item_id: AURA-BLACK, name: "[TIP] Aura Black", amount: 3}
+    admin:
+      name: "[TIP] Aura Black"
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+    website:
+      name: "[TIP] Aura Black"
+      seed_point: 300
+      gsp_earn: 300
+      purchase_limit: 1
+      items:
+        - item_id: AURA-BLACK
+          name: "[TIP] Aura Black"
+          amount:
+            value: 2
+            raw_text: "2x"
+            locator: "website image: Aura Black amount"
+    receipt:
+      items:
+        - {item_id: AURA-BLACK}
+
+  - bundle_id: 114435
+    spec:
+      name: "ดาว 167 Pack 4"
+      seed_point: 400
+      gsp_earn: 400
+      purchase_limit: 1
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+      reset_type: none
+      items:
+        - {item_id: ITEM-04, name: "Normal Item 4", amount: 4}
+    admin:
+      name: "ดาว 167 Pack 4"
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+    website:
+      name: "ดาว 167 Pack 4"
+      seed_point: 400
+      gsp_earn: 400
+      purchase_limit: 1
+      items:
+        - {item_id: ITEM-04, name: "Normal Item 4", amount: 4}
+    receipt:
+      items:
+        - {item_id: ITEM-04}
+
+  - bundle_id: 114436
+    spec:
+      name: "ดาว 167 Pack 5"
+      seed_point: 500
+      gsp_earn: 500
+      purchase_limit: 1
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+      reset_type: none
+      items:
+        - {item_id: ITEM-05, name: "Normal Item 5", amount: 5}
+    admin:
+      name: "ดาว 167 Pack 5"
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+    website:
+      name: "ดาว 167 Pack 5"
+      seed_point: 500
+      gsp_earn: 500
+      purchase_limit: 1
+      items:
+        - {item_id: ITEM-05, name: "Normal Item 5", amount: 5}
+    receipt:
+      items:
+        - {item_id: ITEM-05}
+
+  - bundle_id: 114437
+    spec:
+      name: "ดาว 167 Pack 6"
+      seed_point: 600
+      gsp_earn: 600
+      purchase_limit: 1
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+      reset_type: none
+      items:
+        - {item_id: ITEM-06, name: "Normal Item 6", amount: 6}
+        - {item_id: GOD-COIN, name: "God Coin", amount: 2}
+    admin:
+      name: "ดาว 167 Pack 6"
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+    website:
+      name: "ดาว 167 Pack 6"
+      seed_point: 600
+      gsp_earn: 600
+      purchase_limit: 1
+      items:
+        - {item_id: ITEM-06, name: "Normal Item 6", amount: 6}
+        - item_id: GOD-COIN
+          name: "God Coin"
+          amount:
+            value: 999
+            raw_text: "เดิมมี God Coin 2"
+            locator: "legacy annotation cell"
+    receipt:
+      items:
+        - {item_id: ITEM-06}
+        - {item_id: GOD-COIN}
+
+  - bundle_id: 114438
+    spec:
+      name: "ดาว 167 Pack 7"
+      seed_point: 700
+      gsp_earn: 700
+      purchase_limit: 1
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+      reset_type: none
+      items:
+        - {item_id: ITEM-07, name: "Normal Item 7", amount: 7}
+    admin:
+      name: "ดาว 167 Pack 7"
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+    website:
+      name: "ดาว 167 Pack 7"
+      seed_point: 700
+      gsp_earn: 700
+      purchase_limit: 1
+      items:
+        - {item_id: ITEM-07, name: "Normal Item 7", amount: 7}
+    receipt:
+      items:
+        - {item_id: ITEM-07}

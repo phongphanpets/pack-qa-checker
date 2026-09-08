@@ -1,0 +1,61 @@
+# Synthetic regressions for the two remaining known defect classes.
+dataset: "Admin name and purchase limit regressions"
+
+bundles:
+  - bundle_id: 990101
+    spec:
+      name:
+        value: "Correct Pack Name"
+        locator: "synthetic spec name"
+      seed_point: 100
+      gsp_earn: 100
+      purchase_limit: 1
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+      reset_type: none
+      items:
+        - {item_id: ADMIN-ITEM, name: "Admin Regression Item", amount: 1}
+    admin:
+      name:
+        value: "Name Copied From Another Pack"
+        locator: "synthetic admin name field"
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+    website:
+      seed_point: 100
+      gsp_earn: 100
+      purchase_limit: 1
+      items:
+        - {item_id: ADMIN-ITEM, name: "Admin Regression Item", amount: 1}
+    receipt:
+      items:
+        - {item_id: ADMIN-ITEM}
+
+  - bundle_id: 990102
+    spec:
+      name: "Purchase Limit Pack"
+      seed_point: 200
+      gsp_earn: 200
+      purchase_limit:
+        value: 1
+        locator: "synthetic spec purchase limit"
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+      reset_type: none
+      items:
+        - {item_id: LIMIT-ITEM, name: "Limit Regression Item", amount: 1}
+    admin:
+      name: "Purchase Limit Pack"
+      start_date: 2026-07-01
+      end_date: 2026-07-31
+    website:
+      seed_point: 200
+      gsp_earn: 200
+      purchase_limit:
+        value: 10
+        locator: "synthetic website purchase limit"
+      items:
+        - {item_id: LIMIT-ITEM, name: "Limit Regression Item", amount: 1}
+    receipt:
+      items:
+        - {item_id: LIMIT-ITEM}

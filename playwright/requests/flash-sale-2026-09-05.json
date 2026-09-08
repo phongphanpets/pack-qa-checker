@@ -1,0 +1,86 @@
+{
+  "campaign": "FLASH SALE 5-7 Sep 2026",
+  "source": "User-provided request text; non-request sections were excluded",
+  "timezone": "Asia/Bangkok",
+  "sharedExpectation": {
+    "rankCondition": "Bronze+",
+    "start": "2026-09-05T00:01:00+07:00",
+    "end": "2026-09-07T23:59:59+07:00",
+    "reset": "NO_RESET",
+    "type": "FLASH_SALE",
+    "discountVisible": false
+  },
+  "reviewRequired": [
+    "The original request does not include a year; 2026 is inferred from the current QA date.",
+    "The source table's THB, Seed Point, GSP Earn, and EXP Rank Earn columns are not unambiguous enough to assert exact price-field mapping.",
+    "The first product says to reuse an old Lanistar bundle but does not provide its Bundle ID."
+  ],
+  "products": [
+    {
+      "name": "เสวเสาร์ : ก็แค่อยากเป็นสาวเวียด",
+      "purchaseLimit": 1,
+      "sourceTotals": { "paid": 49, "discountPercent": 88.6 },
+      "fixedRewards": [
+        { "itemId": "63301001", "name": "Special Fellow Ticket - Half Year Anniversary", "amount": 1 },
+        { "itemId": "63301002", "name": "Special Kupole Ticket - Half Year Anniversary", "amount": 1 },
+        { "itemId": "Popo_Fellow_1", "name": "Fellow Coin 1", "amount": 1 },
+        { "itemId": "Popo_Kupo_1", "name": "Kupole Coin 1", "amount": 1 },
+        { "itemId": "1002102", "name": "[แจกรางวัล] Dungeon Battle Token (3 วัน)", "amount": 1 }
+      ]
+    },
+    {
+      "name": "เสวเสาร์ : Ai Đưa Em Về",
+      "purchaseLimit": 10,
+      "sourceTotals": { "paid": 590, "discountPercent": 65.92 },
+      "fixedRewards": [
+        { "itemId": "51201", "name": "Lanistar Key", "amount": 5 },
+        { "itemId": "45024", "name": "Celestial Belorb Stabilizer", "amount": 1 },
+        { "itemId": "43014", "name": "Mercenary Trainee Certificate : Epic", "amount": 1 }
+      ],
+      "randomRewards": [
+        { "itemId": "51201", "name": "Lanistar Key", "amount": 50, "chancePercent": 0.2 },
+        { "itemId": "51201", "name": "Lanistar Key", "amount": 40, "chancePercent": 0.3 },
+        { "itemId": "51201", "name": "Lanistar Key", "amount": 30, "chancePercent": 0.5 },
+        { "itemId": "51201", "name": "Lanistar Key", "amount": 10, "chancePercent": 1 },
+        { "itemId": "51201", "name": "Lanistar Key", "amount": 7, "chancePercent": 3 },
+        { "itemId": "51201", "name": "Lanistar Key", "amount": 5, "chancePercent": 10 },
+        { "itemId": "51201", "name": "Lanistar Key", "amount": 3, "chancePercent": 15 },
+        { "itemId": "51201", "name": "Lanistar Key", "amount": 1, "chancePercent": 70 }
+      ]
+    },
+    {
+      "name": "เสวเสาร์ : Đi Đu Đưa Đi",
+      "purchaseLimit": 10,
+      "sourceTotals": { "paid": 590, "discountPercent": 71.41 },
+      "fixedRewards": [
+        { "itemId": "Diamond_Cur", "name": "Diamond", "amount": 70 },
+        { "itemId": "4235152", "name": "Starlight Belorb : Goddess", "amount": 7 }
+      ],
+      "randomRewards": [
+        { "itemId": "4235152", "name": "Starlight Belorb : Goddess", "amount": 100, "chancePercent": 0.03 },
+        { "itemId": "4235152", "name": "Starlight Belorb : Goddess", "amount": 80, "chancePercent": 0.05 },
+        { "itemId": "4235152", "name": "Starlight Belorb : Goddess", "amount": 60, "chancePercent": 0.1 },
+        { "itemId": "4235152", "name": "Starlight Belorb : Goddess", "amount": 40, "chancePercent": 0.2 },
+        { "itemId": "4235152", "name": "Starlight Belorb : Goddess", "amount": 30, "chancePercent": 0.5 },
+        { "itemId": "4235152", "name": "Starlight Belorb : Goddess", "amount": 15, "chancePercent": 1 },
+        { "itemId": "4235152", "name": "Starlight Belorb : Goddess", "amount": 10, "chancePercent": 3 },
+        { "itemId": "4235152", "name": "Starlight Belorb : Goddess", "amount": 7, "chancePercent": 5 },
+        { "itemId": "4235152", "name": "Starlight Belorb : Goddess", "amount": 5, "chancePercent": 25.12 },
+        { "itemId": "4235152", "name": "Starlight Belorb : Goddess", "amount": 3, "chancePercent": 65 }
+      ]
+    },
+    {
+      "name": "เสวเสาร์ : CÀ PHÊ",
+      "purchaseLimit": 1,
+      "sourceTotals": { "paid": 249, "discountPercent": 80.85 },
+      "fixedRewards": [
+        { "itemId": "540051", "name": "Mirror Card : Legendary", "amount": 1 },
+        { "itemId": "540041", "name": "Mirror Card : Epic", "amount": 1 },
+        { "itemId": "540031", "name": "Mirror Card : Unique", "amount": 1 },
+        { "itemId": "540021", "name": "Mirror Card : Rare", "amount": 1 },
+        { "itemId": "540011", "name": "Mirror Card : Common", "amount": 1 },
+        { "itemId": "4224500", "name": "Card Fragment", "amount": 999 }
+      ]
+    }
+  ]
+}

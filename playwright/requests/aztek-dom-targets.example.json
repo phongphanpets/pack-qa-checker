@@ -1,0 +1,10 @@
+{
+  "adminUrl": "https://aztek-tools.exe.in.th",
+  "outputFile": "qa-reports/aztek-dom/latest.json",
+  "targets": [
+    {
+      "productUuid": "a2a598c7-7e83-40d8-8ff8-3e8e88685fb9",
+      "bundleIds": [115184, 115185]
+    }
+  ]
+}

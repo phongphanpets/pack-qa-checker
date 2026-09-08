@@ -1,0 +1,28 @@
+{
+  "url": "https://tosm-portal.exe.in.th/shop/rank",
+  "sectionTitle": "Flash Sale",
+  "countdownLabels": ["วัน", "ชั่วโมง", "นาที", "วินาที"],
+  "products": [
+    {
+      "nameContains": "Skibidi",
+      "rank": "Rank bronze",
+      "bonusContains": "+ 290",
+      "soldOut": true,
+      "purchaseLimitText": "มีการจำกัดการซื้อ"
+    },
+    {
+      "nameContains": "ขี้แมวระเบิด",
+      "rank": "Rank bronze",
+      "bonusContains": "+ 490",
+      "priceText": "490 SP",
+      "purchaseLimitText": "มีการจำกัดการซื้อ"
+    },
+    {
+      "nameContains": "79%",
+      "rank": "Rank bronze",
+      "bonusContains": "+ 790",
+      "priceText": "790 SP",
+      "purchaseLimitText": "มีการจำกัดการซื้อ"
+    }
+  ]
+}

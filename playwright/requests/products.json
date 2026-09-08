@@ -1,0 +1,67 @@
+{
+  "products": [
+    {
+      "id": "tosm-step-god-gacha-3-fellow-coin",
+      "url": "https://tosm-portal.exe.in.th/shop/step-up",
+      "selectors": {},
+      "expected": {
+        "nameContains": "Fellow Coin",
+        "pageTexts": [
+          "STEP GOD GACHA #3 : Fellow Coin DC Upto 71%",
+          "Fellow Coin (Discount Upto 71 %)",
+          "Bronze+",
+          "27 Aug",
+          "14.00",
+          "27 Sep",
+          "23.59",
+          "Sunday 23.59",
+          "Step Promotion",
+          "NO",
+          "โมเดล คุ้มแบบ Curve ต้นคุ้ม กลางเฉย ๆ ปลายคุ้ม"
+        ],
+        "steps": [
+          {
+            "label": "Step 1",
+            "fields": ["29", "290", "Popo_Fellow_1", "Fellow Coin 1", "1", "50", "100"]
+          },
+          {
+            "label": "Step 2",
+            "fields": ["39", "390", "Popo_Fellow_1", "Fellow Coin 1", "1", "50", "100"]
+          },
+          {
+            "label": "Step 3",
+            "fields": ["119", "1190", "Popo_Fellow_1", "Fellow Coin 1", "3", "150", "300"]
+          },
+          {
+            "label": "Step 4",
+            "fields": ["139", "1390", "Popo_Fellow_1", "Fellow Coin 1", "3", "150", "300"]
+          },
+          {
+            "label": "Step 5",
+            "fields": ["199", "1990", "Popo_Fellow_1", "Fellow Coin 1", "5", "2", "250", "500"]
+          },
+          {
+            "label": "Step 6",
+            "fields": ["229", "2290", "Popo_Fellow_1", "Fellow Coin 1", "5", "250", "500"]
+          },
+          {
+            "label": "Step 7",
+            "fields": ["299", "2990", "Popo_Fellow_1", "Fellow Coin 1", "7", "350", "700"]
+          },
+          {
+            "label": "Step 8",
+            "fields": ["279", "2790", "Popo_Fellow_1", "Fellow Coin 1", "7", "350", "700"]
+          },
+          {
+            "label": "Step 9",
+            "fields": ["379", "3790", "Popo_Fellow_1", "Fellow Coin 1", "10", "500", "1000"]
+          },
+          {
+            "label": "Step 10",
+            "fields": ["349", "3490", "Popo_Fellow_1", "Fellow Coin 1", "10", "500", "1000"]
+          }
+        ]
+      }
+    }
+  ]
+}

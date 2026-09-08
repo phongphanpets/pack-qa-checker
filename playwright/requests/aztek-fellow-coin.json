@@ -1,0 +1,20 @@
+{
+  "adminUrl": "https://aztek-tools-v2.exe.in.th",
+  "campaign": "STEP GOD GACHA #3 : Fellow Coin DC Upto 71%",
+  "productWindow": {
+    "startsAt": "27 Aug 2026 14:00:00",
+    "endsAt": "27 Sep 2026 23:59:59"
+  },
+  "steps": [
+    { "step": 1, "productName": "Fellow Coin x1", "price": 290, "quantity": 1, "seedPoint": 290, "experience": 29 },
+    { "step": 2, "productName": "Fellow Coin x1", "price": 390, "quantity": 1, "seedPoint": 390, "experience": 39 },
+    { "step": 3, "productName": "Fellow Coin x3", "price": 1190, "quantity": 3, "seedPoint": 1190, "experience": 119 },
+    { "step": 4, "productName": "Fellow Coin x3", "price": 1390, "quantity": 3, "seedPoint": 1390, "experience": 139 },
+    { "step": 5, "productName": "Fellow Coin x5", "price": 1990, "quantity": 5, "seedPoint": 1990, "experience": 199 },
+    { "step": 6, "productName": "Fellow Coin x5", "price": 2290, "quantity": 5, "seedPoint": 2290, "experience": 229 },
+    { "step": 7, "productName": "Fellow Coin x7", "price": 2990, "quantity": 7, "seedPoint": 2990, "experience": 299 },
+    { "step": 8, "productName": "Fellow Coin x7", "price": 2790, "quantity": 7, "seedPoint": 2790, "experience": 279 },
+    { "step": 9, "productName": "Fellow Coin x10", "price": 3790, "quantity": 10, "seedPoint": 3790, "experience": 379 },
+    { "step": 10, "productName": "Fellow Coin x10", "price": 3490, "quantity": 10, "seedPoint": 3490, "experience": 349 }
+  ]
+}

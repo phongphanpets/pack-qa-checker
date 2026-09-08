@@ -1,0 +1,28 @@
+{
+  "name": "product-request-checker",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "test": "playwright test",
+    "auth:tosm": "playwright test -c playwright.auth.config.ts tosm-auth.setup.ts --headed --project=edge",
+    "auth:aztek": "playwright test -c playwright.auth.config.ts aztek-auth.setup.ts --headed --project=edge",
+    "test:aztek-fellow-coin": "playwright test aztek-fellow-coin.spec.ts",
+    "test:aztek-fellow-coin:headed": "playwright test aztek-fellow-coin.spec.ts --headed",
+    "test:aztek-sep-1-pack-qa": "playwright test aztek-sep-1-pack-qa.spec.ts",
+    "test:aztek-sep-1-pack-qa:headed": "playwright test aztek-sep-1-pack-qa.spec.ts --headed",
+    "report:aztek-sep-1-pack-qa": "playwright test aztek-sep-1-automated-report.spec.ts",
+    "report:aztek-sep-1-pack-qa:headed": "playwright test aztek-sep-1-automated-report.spec.ts --headed",
+    "read:aztek-dom": "playwright test aztek-dom-readback.spec.ts",
+    "test:google-sheet-aztek-qa": "playwright test google-sheet-aztek-qa.spec.ts",
+    "test:rank-flash-sale": "playwright test rank-flash-sale.spec.ts",
+    "test:rank-flash-sale:headed": "playwright test rank-flash-sale.spec.ts --headed",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.5.0"
+  }
+}
