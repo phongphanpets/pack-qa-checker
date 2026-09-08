@@ -210,6 +210,17 @@ test("parses a headerless Item ID, Item Name and Amt list", () => {
   assert.equal(result.bundles[0].items[2].amount, 1500);
 });
 
+test("reads GSP Earn and EXP Rank Earn from the bundle summary row", () => {
+  const result = parseExcelPaste(
+    "Product Name\tSample Bundle\n" +
+      "0\tTHB\tSeed Point\tGSP Earn\tEXP Rank Earn\tIMG\tItem ID\tItem Name\tAmt\n" +
+      "1\t99\t990\t990\t99\t\t4235100\tBelorb Stabilizer\t1",
+  );
+  assert.equal(result.valid, true);
+  assert.equal(result.bundles[0].gsp_earn, 990);
+  assert.equal(result.bundles[0].player_exp, 99);
+});
+
 test("recognizes Cost Chance as a random chance column", () => {
   const result = parseExcelPaste(
     `Bundle Name\tWheel Rewards

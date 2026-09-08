@@ -18,6 +18,7 @@ export type ExcelPasteResult = {
     itemCount: number;
     seedPoint: number | null;
     gspEarn: number | null;
+    playerExp: number | null;
     purchaseLimit: number | null;
     isGacha: boolean;
     isPermanent: boolean;
@@ -158,6 +159,7 @@ function parseBundleSection(
   const nameCell = valueAfterLabel(rows, bundleNameLabels) || titleBeforeHeader(rows, itemHeaderRow);
   const seedPointCell = itemHeaderRow >= 0 ? valueBelowHeader(rows, itemHeaderRow, ["seed point", "seed_point"]) : null;
   const gspCell = itemHeaderRow >= 0 ? valueBelowHeader(rows, itemHeaderRow, ["gsp earn", "gsp", "gsp_earn"]) : null;
+  const playerExpCell = itemHeaderRow >= 0 ? valueBelowHeader(rows, itemHeaderRow, ["exp rank earn", "player exp", "player experience", "exp"]) : null;
   const inlineLimitCell = valueAfterLabel(rows, purchaseLimitLabels);
   const limitCell =
     integer(inlineLimitCell?.value) !== null
@@ -186,6 +188,7 @@ function parseBundleSection(
 
   const seedPoint = integer(seedPointCell?.value);
   const gspEarn = integer(gspCell?.value);
+  const playerExp = integer(playerExpCell?.value);
   const purchaseLimit = integer(limitCell?.value);
   const valid = bundleId !== null && Boolean(name) && items.length > 0 && items.every((item) => Boolean(clean(item.itemId.value)));
   const documentItems = items.map((item) => ({
@@ -199,6 +202,7 @@ function parseBundleSection(
     name: nameCell && name ? field(nameCell, name) : undefined,
     seed_point: seedPointCell && seedPoint !== null ? field(seedPointCell, seedPoint) : undefined,
     gsp_earn: gspCell && gspEarn !== null ? field(gspCell, gspEarn) : undefined,
+    player_exp: playerExpCell && playerExp !== null ? field(playerExpCell, playerExp) : undefined,
     purchase_limit: limitCell && purchaseLimit !== null ? field(limitCell, purchaseLimit) : undefined,
     start_date: startCell && startDate ? field(startCell, startDate) : undefined,
     end_date: endCell && endDate ? field(endCell, endDate) : undefined,
@@ -213,14 +217,14 @@ function parseBundleSection(
     ...(isGacha ? { gacha: { bundle_id: field(explicitBundleCell, bundleId), is_gacha: true, items: randomItems.map((item) => ({ item_id: field(item.itemId, clean(item.itemId.value)), name: field(item.name, clean(item.name.value)), amount: field(item.amount, item.amountValue), chance: field(item.chance, item.chanceValue) })) } } : {}),
   };
   const bundle: SpecBundle | null = bundleId === null ? null : {
-    bundle_id: bundleId, name, seed_point: seedPoint, gsp_earn: gspEarn, purchase_limit: purchaseLimit, is_gacha: isGacha, is_permanent: isPermanent,
+    bundle_id: bundleId, name, seed_point: seedPoint, gsp_earn: gspEarn, player_exp: playerExp, purchase_limit: purchaseLimit, is_gacha: isGacha, is_permanent: isPermanent,
     items: items.map((item) => ({ item_id: clean(item.itemId.value), name: clean(item.name.value), amount: item.amountValue, chance: item.chanceValue })),
   };
-  return { documentBundle, bundle, valid, warnings, summary: { bundleId, generatedBundleId, name, itemCount: items.length, seedPoint, gspEarn, purchaseLimit, isGacha, isPermanent, fixedItemCount: items.length - randomItems.length, randomOutcomeCount: randomItems.length, chanceTotal } };
+  return { documentBundle, bundle, valid, warnings, summary: { bundleId, generatedBundleId, name, itemCount: items.length, seedPoint, gspEarn, playerExp, purchaseLimit, isGacha, isPermanent, fixedItemCount: items.length - randomItems.length, randomOutcomeCount: randomItems.length, chanceTotal } };
 }
 
 function emptySection() {
-  return { documentBundle: null, bundle: null, valid: false, warnings: [], summary: { bundleId: null, generatedBundleId: false, name: null, itemCount: 0, seedPoint: null, gspEarn: null, purchaseLimit: null, isGacha: false, isPermanent: false, fixedItemCount: 0, randomOutcomeCount: 0, chanceTotal: null } };
+  return { documentBundle: null, bundle: null, valid: false, warnings: [], summary: { bundleId: null, generatedBundleId: false, name: null, itemCount: 0, seedPoint: null, gspEarn: null, playerExp: null, purchaseLimit: null, isGacha: false, isPermanent: false, fixedItemCount: 0, randomOutcomeCount: 0, chanceTotal: null } };
 }
 
 function sectionStart(rows: Cell[][], headerRow: number, fallback: number) {

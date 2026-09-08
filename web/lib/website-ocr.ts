@@ -12,6 +12,7 @@ export type SpecBundle = {
   name: string | null;
   seed_point: number | null;
   gsp_earn: number | null;
+  player_exp?: number | null;
   purchase_limit: number | null;
   is_gacha?: boolean;
   is_permanent?: boolean;

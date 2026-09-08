@@ -51,6 +51,27 @@ function manualBundles(name: string, price: string, limit: string, items: Manual
   ];
 }
 
+function expandParsedBundles(source: SpecBundle[]): SpecBundle[] {
+  return source.flatMap((bundle) => {
+    const fixedItems = bundle.items.filter((item) => item.chance === null);
+    const randomItems = bundle.items.filter((item) => item.chance !== null);
+    const rewards = [
+      bundle.gsp_earn !== null && bundle.gsp_earn !== undefined && !bundle.items.some((item) => item.item_id?.toLowerCase() === "gsp")
+        ? { item_id: "GSP", name: "Golden Seed Point", amount: bundle.gsp_earn, chance: null }
+        : null,
+      bundle.player_exp !== null && bundle.player_exp !== undefined && !bundle.items.some((item) => item.item_id?.toLowerCase() === "player_exp")
+        ? { item_id: "PLAYER_EXP", name: "Player EXP", amount: bundle.player_exp, chance: null }
+        : null,
+    ].filter((item): item is { item_id: string; name: string; amount: number; chance: null } => item !== null);
+    const withBase = (name: string, items: typeof bundle.items, isGacha: boolean): SpecBundle => ({ ...bundle, name, is_gacha: isGacha, items });
+    if (!randomItems.length) return [withBase(bundle.name || "Bundle", [...fixedItems, ...rewards], false)];
+    return [
+      withBase((bundle.name || "Bundle") + " - Fixed", [...fixedItems, ...rewards], false),
+      withBase((bundle.name || "Bundle") + " - Random", randomItems, true),
+    ];
+  });
+}
+
 function ItemCodeContext({ details }: { details: Record<string, unknown> }) {
   const conditions = Array.isArray(details.conditions) ? details.conditions.filter((value): value is string => typeof value === "string") : [];
   const fields = [
@@ -112,7 +133,7 @@ export default function ImportAdapterWorkspace() {
   } : null, [autoRewards]);
   const sourceResult = sourceMode === "paste" ? parsedPaste : sourceMode === "manual" ? null : parsedSheet;
   const parsedBundles = sourceMode === "paste" ? parsedPaste.bundles : sourceMode === "manual" ? manual : parsedSheet.bundles;
-  const bundles = autoFixedBundle ? [autoFixedBundle, ...parsedBundles] : parsedBundles;
+  const bundles = autoFixedBundle ? [autoFixedBundle, ...parsedBundles] : sourceMode === "manual" ? parsedBundles : expandParsedBundles(parsedBundles);
   const lockedCount = [...locked].filter((index) => index < bundles.length).length;
   const selectedCount = lockedCount || bundles.length;
 
