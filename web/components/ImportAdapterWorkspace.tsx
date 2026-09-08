@@ -290,8 +290,8 @@ function SpreadsheetInput({ fileName, tabs, selectedTab, loading, error, parsed,
 }
 
 function BareBundleName({ parsed, value, onChange }: { parsed: ExcelPasteResult; value: string; onChange: (value: string) => void }) {
-  if (!parsed.bundles.some((bundle) => bundle.name === "Untitled Bundle")) return null;
-  return <label className="bare-bundle-name"><span>ชื่อ Bundle</span><input aria-label="ชื่อ Bundle จากรายการ" value={value} onChange={(event) => onChange(event.target.value)} placeholder="เช่น EXP1-170" /><small>ระบบอ่าน Item ID, Item Name และ Amt จากรายการนี้ได้แล้ว</small></label>;
+  const needsName = parsed.bundles.some((bundle) => bundle.name === "Untitled Bundle");
+  return <label className="bare-bundle-name"><span>ชื่อ Bundle {needsName ? "*" : "(ถ้าตารางไม่มีชื่อ)"}</span><input aria-label="ชื่อ Bundle จากรายการ" value={value} onChange={(event) => onChange(event.target.value)} placeholder="เช่น EXP1-170" /><small>{needsName ? "ระบบอ่าน Item ID, Item Name และ Amt ได้แล้ว กรุณาตั้งชื่อก่อน Export" : "กรอกไว้ล่วงหน้าได้ หากวางตารางรายการที่ไม่มีชื่อ Bundle"}</small></label>;
 }
 
 function ParseStatus({ parsed }: { parsed: ExcelPasteResult }) {
