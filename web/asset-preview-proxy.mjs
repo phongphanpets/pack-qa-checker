@@ -1,15 +1,26 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rename } from "node:fs/promises";
 import { createServer, request as proxyRequest } from "node:http";
 import { extname, resolve, sep } from "node:path";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { inflateRawSync } from "node:zlib";
 import { recordRequestEvent, changeRequestStatus } from "./lib/request-events.mjs";
 
 const port = Number(process.env.PORT ?? 3003);
 const upstreamPort = Number(process.env.PACK_QA_UPSTREAM_PORT ?? 3005);
 const clientRoot = resolve("dist/client");
-const requestStorePath = resolve("../data/import_requests.local.json");
+const dataRoot = resolve(process.env.PACK_QA_DATA_DIR || "../data");
+const requestStorePath = resolve(dataRoot, "import_requests.local.json");
+const apiOnly = process.env.PACK_QA_API_ONLY === "1";
+const apiToken = process.env.PACK_QA_API_TOKEN || "";
+const allowedOrigin = process.env.PACK_QA_ALLOWED_ORIGIN || "";
+if (apiOnly && (!apiToken || !allowedOrigin)) throw new Error("API server requires PACK_QA_API_TOKEN and PACK_QA_ALLOWED_ORIGIN");
+let pendingWrite = Promise.resolve();
+function serialize(operation) {
+  const result = pendingWrite.then(operation);
+  pendingWrite = result.catch(() => {});
+  return result;
+}
 const bundleTemplatePath = resolve("templates/bundle-import-template.xlsx");
 const productTemplatePath = resolve("templates/product-import-template.xlsx");
 
@@ -33,6 +44,21 @@ function staticFilePath(url) {
 }
 
 createServer((req, res) => {
+  if (apiOnly) {
+    res.setHeader("Cache-Control", "no-store");
+    const origin = req.headers.origin;
+    if (origin && origin !== allowedOrigin) return json(res, 403, { error: "Origin not allowed" });
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+      res.setHeader("Vary", "Origin");
+      res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    }
+    if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
+    const given = Buffer.from(req.headers.authorization || "");
+    const expected = Buffer.from(`Bearer ${apiToken}`);
+    if (given.length !== expected.length || !timingSafeEqual(given, expected)) return json(res, 401, { error: "Unauthorized" });
+  }
   if ((req.url ?? "").startsWith("/api/google-sheets")) {
     void handleGoogleSheet(req, res);
     return;
@@ -50,9 +76,10 @@ createServer((req, res) => {
     return;
   }
   if ((req.url ?? "").startsWith("/api/requests")) {
-    void handleRequestHub(req, res);
+    void serialize(() => handleRequestHub(req, res));
     return;
   }
+  if (apiOnly) return json(res, 404, { error: "Not found" });
   const filePath = staticFilePath(req.url ?? "/");
   if (filePath && existsSync(filePath) && statSync(filePath).isFile()) {
     res.writeHead(200, {
@@ -81,7 +108,7 @@ createServer((req, res) => {
     res.end("Pack QA preview is not ready.");
   });
   req.pipe(upstream);
-}).listen(port, "127.0.0.1", () => {
+}).listen(port, process.env.PACK_QA_HOST || "127.0.0.1", () => {
   console.log(`Pack QA preview is ready at http://127.0.0.1:${port}`);
 });
 
@@ -505,22 +532,39 @@ async function readRequests() {
   try {
     const value = JSON.parse(await readFile(requestStorePath, "utf8"));
     return Array.isArray(value) ? value.map((entry) => entry?.status === "AI_PROCESSING" ? { ...entry, status: "PROCESSING" } : entry) : [];
-  } catch { return []; }
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
 }
 
 async function writeRequests(requests) {
   await mkdir(resolve(requestStorePath, ".."), { recursive: true });
-  await writeFile(requestStorePath, JSON.stringify(requests, null, 2), "utf8");
+  const temporary = requestStorePath + ".tmp";
+  await writeFile(temporary, JSON.stringify(requests, null, 2), "utf8");
+  // Windows file scanners may briefly hold the destination open.
+  for (let attempt = 0; ; attempt++) {
+    try { await rename(temporary, requestStorePath); break; }
+    catch (error) {
+      if (process.platform !== "win32" || !["EPERM", "EACCES", "EBUSY"].includes(error.code) || attempt >= 5) throw error;
+      await new Promise(resolve => setTimeout(resolve, 30 * (attempt + 1)));
+    }
+  }
 }
 
 async function saveRequestExport(requestId, filename, type, contents, details) {
+  return serialize(() => persistRequestExport(requestId, filename, type, contents, details));
+}
+
+async function persistRequestExport(requestId, filename, type, contents, details) {
   if (!requestId || requestId.startsWith("LOCAL-")) return;
   const requests = await readRequests();
   const entry = requests.find((item) => item.id === requestId);
   if (!entry) return;
   const artifactId = randomUUID().replaceAll("-", "").slice(0, 12);
   const safeName = safeExportFilename(filename || `${type.toLowerCase()}.xlsx`);
-  const directory = resolve("../data/request_exports", requestId);
+  if (!/^[A-Z0-9]+$/i.test(requestId)) throw new Error("Invalid request ID");
+  const directory = resolve(dataRoot, "request_exports", requestId);
   await mkdir(directory, { recursive: true });
   await writeFile(resolve(directory, `${artifactId}.xlsx`), contents);
   const exports = Array.isArray(entry.payload?.exports) ? entry.payload.exports : [];
@@ -540,8 +584,8 @@ function sendRequestExport(res, requests, requestId, exportId) {
   const entry = requests.find((item) => item.id === requestId);
   const artifact = Array.isArray(entry?.payload?.exports) ? entry.payload.exports.find((item) => item?.id === exportId) : null;
   if (!artifact) return json(res, 404, { error: "ไม่พบไฟล์ Export" });
-  const filePath = resolve("../data/request_exports", requestId, `${exportId}.xlsx`);
-  if (!filePath.startsWith(resolve("../data/request_exports") + sep) || !existsSync(filePath)) return json(res, 404, { error: "ไม่พบไฟล์ Export" });
+  const filePath = resolve(dataRoot, "request_exports", requestId, `${exportId}.xlsx`);
+  if (!filePath.startsWith(resolve(dataRoot, "request_exports") + sep) || !existsSync(filePath)) return json(res, 404, { error: "ไม่พบไฟล์ Export" });
   res.writeHead(200, {
     "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "Content-Disposition": `attachment; filename="${safeExportFilename(artifact.filename)}"`,
@@ -565,7 +609,7 @@ async function notifyDiscord(entry, event) {
   const webhookUrl = process.env.PACK_QA_DISCORD_WEBHOOK_URL?.trim() || await webhookFromEnvFile();
   if (!webhookUrl) return "NOT_CONFIGURED";
   try {
-    const response = await fetch(webhookUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: `**${event}**\n\`${entry.id}\` · ${entry.title}\nType: ${entry.request_type} · Status: ${entry.status}` }) });
+    const response = await fetch(webhookUrl, { method: "POST", signal: AbortSignal.timeout(8000), headers: { "Content-Type": "application/json" }, body: JSON.stringify({ allowed_mentions: { parse: [] }, content: `**${event}**\n\`${entry.id}\` · ${entry.title}\nType: ${entry.request_type} · Status: ${entry.status}` }) });
     return response.ok ? "SENT" : "FAILED";
   } catch { return "FAILED"; }
 }

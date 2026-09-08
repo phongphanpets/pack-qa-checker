@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { apiFetch, downloadApiFile } from "@/lib/api-client";
 
 import ItemCodeRequestForm from "@/components/ItemCodeRequestForm";
 import { parseExcelPaste } from "@/lib/excel-paste";
@@ -68,14 +69,15 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
   async function loadRequests() {
     setLoading(true);
     try {
-      const response = await fetch(API + "/requests");
+      const response = await apiFetch(API + "/requests");
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "โหลดรายการไม่สำเร็จ");
       setRequests(body.requests);
       setError("");
-    } catch {
-      setRequests(readLocalRequests());
-      setError("กำลังใช้ Request Hub ในเครื่องชั่วคราว — เปิด API เพื่อบันทึกส่วนกลางและแจ้ง Discord");
+    } catch (error) {
+      const remote = Boolean(localStorage.getItem("bundle-import-api-endpoint")) || window.location.hostname.endsWith("github.io");
+      setRequests(remote ? [] : readLocalRequests());
+      setError(remote ? error instanceof Error ? error.message : "โหลด History ไม่สำเร็จ" : "กำลังใช้ Request Hub ในเครื่องชั่วคราว — เปิด API เพื่อบันทึกส่วนกลางและแจ้ง Discord");
     } finally {
       setLoading(false);
     }
@@ -100,7 +102,7 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
     setLoadingSheet(true);
     setError("");
     try {
-      const response = await fetch(API + "/google-sheets?url=" + encodeURIComponent(sheetUrl));
+      const response = await apiFetch(API + "/google-sheets?url=" + encodeURIComponent(sheetUrl));
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "อ่าน Google Sheet ไม่สำเร็จ");
       setSheetTabs(body.tabs);
@@ -170,7 +172,7 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
           } : null,
         },
       };
-      const response = await fetch(API + "/requests", {
+      const response = await apiFetch(API + "/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -198,7 +200,7 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
 
   async function moveStatus(id: string, status: RequestStatus) {
     try {
-      const response = await fetch(API + "/requests/" + id + "/status", {
+      const response = await apiFetch(API + "/requests/" + id + "/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -222,7 +224,7 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
 
   async function openInAdapter(id: string) {
     try {
-      const response = await fetch(API + "/requests/" + id);
+      const response = await apiFetch(API + "/requests/" + id);
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "เปิด Request ไม่สำเร็จ");
       openAdapterWithRequest(body.request);
@@ -346,9 +348,11 @@ function DecisionCard({ active, title, detail, onClick }: { active: boolean; tit
 }
 
 function RequestArtifacts({ request }: { request: HubRequest }) {
+  const [downloadError, setDownloadError] = useState("");
   const exports = Array.isArray(request.payload.exports) ? request.payload.exports.filter((item): item is { id: string; filename: string; type: string } => Boolean(item && typeof item === "object" && "id" in item && "filename" in item)) : [];
   return <details className="request-artifacts"><summary>ประวัติและไฟล์ ({exports.length})</summary>
-    {exports.map((artifact) => <a key={artifact.id} href={API + "/requests/" + encodeURIComponent(request.id) + "/exports/" + encodeURIComponent(artifact.id)}>{artifact.type === "PRODUCT_IMPORT" ? "Product" : "Bundle"}: {artifact.filename}</a>)}
+    {exports.map((artifact) => <button type="button" className="quiet-button" key={artifact.id} onClick={() => { setDownloadError(""); void downloadApiFile(API + "/requests/" + encodeURIComponent(request.id) + "/exports/" + encodeURIComponent(artifact.id), artifact.filename).catch(error => setDownloadError(error.message)); }}>{artifact.type === "PRODUCT_IMPORT" ? "Product" : "Bundle"}: {artifact.filename}</button>)}
+    {downloadError && <p role="alert">{downloadError}</p>}
     <ol>{(request.history || []).map((event, index) => <li key={index}><time>{new Date(event.at).toLocaleString("th-TH")}</time>{" · "}{event.type === "EXPORTED" ? "Export " + event.filename : event.type === "CREATED" ? "สร้าง Request" : `${event.from ? labels[event.from] || event.from : ""} → ${event.to ? labels[event.to] || event.to : ""}`}</li>)}</ol>
     {!request.history?.length && <p>ยังไม่มีประวัติการเปลี่ยนสถานะที่บันทึกไว้</p>}
   </details>;

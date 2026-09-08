@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "@/lib/api-client";
 
 import ItemCatalogCheck from "@/components/ItemCatalogCheck";
 import ProductExportPanel from "@/components/ProductExportPanel";
@@ -111,6 +112,8 @@ export default function ImportAdapterWorkspace() {
   const [requestType, setRequestType] = useState<"WEB_SHOP" | "ITEM_CODE" | null>(null);
   const [itemCodeDetails, setItemCodeDetails] = useState<Record<string, unknown> | null>(null);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [exportError, setExportError] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const rawParsedPaste = useMemo<ExcelPasteResult>(() => parseExcelPaste(pasteValue), [pasteValue]);
   const parsedPaste = useMemo<ExcelPasteResult>(() => applyBareBundleName(rawParsedPaste, bareBundleName), [rawParsedPaste, bareBundleName]);
@@ -234,9 +237,12 @@ export default function ImportAdapterWorkspace() {
   }
 
   async function downloadImport() {
+    setExportError("");
+    setExporting(true);
+    try {
     const included = bundles.filter((_, index) => lockedCount === 0 || locked.has(index));
     const filename = safeFilename(exportName || bundleName || included[0]?.name || "bundle-import") + ".xlsx";
-    const response = await fetch("/api/bundle-import", {
+    const response = await apiFetch("/api/bundle-import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ bundles: included, catalog, requestId, filename }),
@@ -249,6 +255,9 @@ export default function ImportAdapterWorkspace() {
     link.download = filename;
     link.click();
     URL.revokeObjectURL(url);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "Export ไม่สำเร็จ");
+    } finally { setExporting(false); }
   }
 
   if (screen === "hub") return <RequestHub onOpenAdapter={() => setScreen("adapter")} onStartBundleOnly={startBundleOnly} />;
@@ -282,7 +291,8 @@ export default function ImportAdapterWorkspace() {
         {!bundles.length ? <EmptyPreview mode={sourceMode} /> : <>
           <div className="preview-summary"><span>{selectedCount} รายการพร้อมส่งต่อ</span><span>{bundles.filter((bundle) => bundle.is_gacha).length} Random</span></div>
           <div className="bundle-preview-list">{bundles.map((bundle, index) => <BundlePreview bundle={bundle} index={index} locked={locked.has(index)} onToggle={() => toggleLock(index)} key={bundle.name + "-" + index} />)}</div>
-          <button type="button" className="primary-button" onClick={() => void downloadImport()}>Export Import file ({selectedCount})</button>
+          <button type="button" className="primary-button" disabled={exporting} onClick={() => void downloadImport()}>{exporting ? "กำลังสร้างไฟล์..." : `Export Import file (${selectedCount})`}</button>
+          {exportError && <p className="hub-error" role="alert">{exportError}</p>}
           <p className="hint">สร้าง Excel ตาม Bundle Import format พร้อม Fixed, Random, Coin, GSP และ Player EXP</p>
         </>}
       </aside>

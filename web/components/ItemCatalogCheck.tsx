@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -55,7 +56,7 @@ export default function ItemCatalogCheck({ bundles, onCatalogChange }: { bundles
     if (!sheetUrl.trim()) { setSheetError("วางลิงก์ Google Sheet ก่อน"); return; }
     setLoadingSheet(true); setSheetError("");
     try {
-      const response = await fetch(`/api/google-sheets?url=${encodeURIComponent(sheetUrl)}`);
+      const response = await apiFetch(`/api/google-sheets?url=${encodeURIComponent(sheetUrl)}`);
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "อ่าน Google Sheet ไม่สำเร็จ");
       setSheetTabs(body.tabs || []);

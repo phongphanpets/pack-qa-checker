@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api-client";
 
 import { useMemo, useState } from "react";
 
@@ -55,7 +56,7 @@ export default function ItemCodeRequestForm({ onBack, onOpenAdapter }: Props) {
     setLoadingSheet(true);
     setError("");
     try {
-      const response = await fetch(API + "/google-sheets?url=" + encodeURIComponent(sheetUrl));
+      const response = await apiFetch(API + "/google-sheets?url=" + encodeURIComponent(sheetUrl));
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "อ่าน Google Sheet ไม่สำเร็จ");
       setSheetTabs(body.tabs);
@@ -105,7 +106,7 @@ export default function ItemCodeRequestForm({ onBack, onOpenAdapter }: Props) {
           } : { state: "AWAITING_SOURCE", warnings: [] },
         },
       };
-      const response = await fetch(API + "/requests", {
+      const response = await apiFetch(API + "/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

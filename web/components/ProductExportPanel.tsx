@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "@/lib/api-client";
 
 import type { SpecBundle } from "@/lib/website-ocr";
 
@@ -36,7 +37,7 @@ export default function ProductExportPanel({ requestId, productName, bundles, se
     setExporting(true);
     setExportError("");
     try {
-      const response = await fetch("/api/product-import", {
+      const response = await apiFetch("/api/product-import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId, filename: `${safeFilename(name)}-product-import.xlsx`, name, category, displayOrder, saleStart, saleEnd, purchaseLimit, currency, actualPrice, fullPrice, bundleNames: selectedBundles.map((bundle) => bundle.name) }),

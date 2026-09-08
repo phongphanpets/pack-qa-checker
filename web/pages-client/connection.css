@@ -1,0 +1,9 @@
+.server-connection { padding: 16px 24px; border-bottom: 1px solid #dce3df; background: #fff; color: #12201f; }
+.server-connection summary { cursor: pointer; font-weight: 600; }
+.server-connection p { margin: 12px 0; font-size: 14px; color: #566560; }
+.server-connection .request-fields { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(160px, 1fr) auto; align-items: end; gap: 12px; max-width: 960px; margin-top: 12px; }
+.server-connection label { display: grid; gap: 6px; font-size: 14px; }
+.server-connection input { width: 100%; min-width: 0; border: 1px solid #cbd5d1; border-radius: 4px; background: white; padding: 9px 12px; }
+.server-connection button { background: #147d72; color: white; border-radius: 4px; padding: 10px 18px; }
+.server-connection button:disabled { background: #dce3df; color: #566560; }
+@media (max-width: 650px) { .server-connection .request-fields { grid-template-columns: 1fr; } }

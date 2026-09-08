@@ -1,3 +1,5 @@
+import { apiFetch } from "./api-client";
+
 export async function sourceTextFromAttachments(files: File[]) {
   if (files.some((file) => /\.xls$/i.test(file.name))) throw new Error("ไฟล์ .xls แบบเก่ายังอ่านไม่ได้ กรุณา Save As เป็น .xlsx ก่อน");
   const spreadsheet = files.find((file) => /\.(xlsx|csv|txt|md)$/i.test(file.name));
@@ -13,7 +15,7 @@ export async function readSpreadsheetTabs(file: File): Promise<SpreadsheetTab[]>
   if (/\.(csv|txt|md)$/i.test(file.name)) return [{ name: file.name.replace(/\.[^.]+$/, "") || "Text", text: await file.text() }];
   if (!/\.xlsx$/i.test(file.name)) throw new Error("รองรับไฟล์ .xlsx, .csv และ .txt");
   const dataUrl = await fileDataUrl(file);
-  const response = await fetch("/api/read-spreadsheet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: file.name, data_url: dataUrl }) });
+  const response = await apiFetch("/api/read-spreadsheet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: file.name, data_url: dataUrl }) });
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || "อ่านไฟล์ Spreadsheet ไม่สำเร็จ");
   return Array.isArray(body.tabs) ? body.tabs : [];
