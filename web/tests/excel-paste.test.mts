@@ -253,6 +253,47 @@ Item ID\tItem Name\tAmt\tCost Chance
   assert.equal(result.bundles[0].items[1].chance, 55);
 });
 
+test("keeps the supplied Item Code title for headerless rewards", () => {
+  const result = parseExcelPaste("Bundle Name\tStreamer itemcode 6/9 #1\n1315001\tFellow Ticket\t2\nCurrency\tGold\t20");
+  assert.equal(result.summary.name, "Streamer itemcode 6/9 #1");
+  assert.equal(result.bundles[0].items.length, 2);
+});
+
+test("reordered Trade and Amt columns retain quantities and shifted rates", () => {
+  const fixed = parseExcelPaste("Bundle Name\tLevel 180\nIMG\tItem ID\tItem Name\tTrade\tAmt\n\t4225031\tBelorb Core\tX\t3");
+  assert.equal(fixed.bundles[0].items[0].amount, 3);
+  const random = parseExcelPaste("Bundle Name\tReordered chance\nIMG\tItem ID\tItem Name\tAmt\tTradable\tChance\tSecret Chance\n51201\tLanistar Key\t3\tX\t100\t70");
+  assert.equal(random.bundles[0].items[0].chance, 100);
+  assert.equal(random.bundles[0].items[0].secret_chance, 70);
+});
+
+test("blocks side by side days, Tier amount matrices and Paid/Free ambiguity", () => {
+  for (const input of [
+    "Item ID\tItem Name\tAmt\tItem ID\tItem Name\tAmt\n51201\tLanistar Key\t2\t52001\tMemory Key\t3",
+    "Item ID\tDisplay Name\tAmt\tAmt\tAmt\n51201\tLanistar Key\t100\t70\t50",
+    "Item ID\tItem Name\tAmt\tCost Chance\tFree Chance\n51201\tLanistar Key\t1\t100\t0",
+  ]) {
+    const result = parseExcelPaste(input);
+    assert.equal(result.valid, false);
+    assert.equal(result.bundles.length, 0, "Never silently export just the first column group");
+    assert.equal(result.warnings[0].code, "UNSUPPORTED_LAYOUT");
+  }
+});
+
+test("invalid quantities and blank random rates cannot become a valid partial bundle", () => {
+  for (const row of ["52001\tMemory Key\t1.5\t50", "52001\tMemory Key\t\t50", "52001\tMemory Key\t1\t", "52001\tMemory Key\t1\toops"]) {
+    const result = parseExcelPaste("Bundle Name\tBad input\nItem ID\tItem Name\tAmt\tChance\n51201\tLanistar Key\t1\t50\n" + row);
+    assert.equal(result.valid, false, row);
+    assert.ok(result.warnings.some(warning => warning.code === "INVALID_ITEM"));
+  }
+});
+
+test("Markdown escaped currencies and thousands quantities survive", () => {
+  const result = parseExcelPaste("Bundle Name\tBACKVELNAS\n| Item ID | Item Name | Amt |\n| --- | --- | --- |\n| Gold\\_Cur | Gold | 1,500 |\n| Popo\\_Fellow\\_1 | Fellow Coin 1 | 30 |");
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.bundles[0].items.map(item => [item.item_id, item.amount]), [["Gold_Cur", 1500], ["Popo_Fellow_1", 30]]);
+});
+
 test("keeps all items when copied Flash Sale rows shift left after the first row", () => {
   const result = parseExcelPaste(
     `🔥FLASH SALE\tProduct Name\tเสวเสาร์ : ก็แค่อยากเป็นสาวเวียด\tStart\t5 Sep\t00.01 น.\tReset\tNo Reset\tLimit (ครั้ง / ID)\tTotal Paid
@@ -267,6 +308,9 @@ test("keeps all items when copied Flash Sale rows shift left after the first row
 
   assert.equal(result.valid, true);
   assert.equal(result.summary.name, "เสวเสาร์ : ก็แค่อยากเป็นสาวเวียด");
+  assert.equal(result.summary.seedPoint, 490);
+  assert.equal(result.summary.gspEarn, 490);
+  assert.equal(result.summary.playerExp, 49);
   assert.equal(result.summary.purchaseLimit, 1);
   assert.equal(result.summary.itemCount, 5);
   assert.deepEqual(
@@ -295,6 +339,8 @@ test("separates fixed and random rows in a shifted Flash Sale request", () => {
 
   assert.equal(result.valid, true);
   assert.equal(result.summary.itemCount, 11);
+  assert.equal(result.summary.gspEarn, 590);
+  assert.equal(result.summary.playerExp, 59);
   assert.equal(result.summary.isGacha, true);
   assert.equal(result.summary.fixedItemCount, 3);
   assert.equal(result.summary.randomOutcomeCount, 8);

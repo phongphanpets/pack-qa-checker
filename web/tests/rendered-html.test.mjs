@@ -23,21 +23,20 @@ async function render() {
   );
 }
 
-test("server-renders Pack QA with Excel paste as the primary flow", async () => {
+test("server-renders Request Hub with request intake and history", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>Pack QA · Pilot RC1<\/title>/i);
-  assert.match(html, /เช็กแพ็กให้ครบ ก่อนส่ง PM/);
-  assert.match(html, /Pilot RC1/);
-  assert.match(html, /บันทึกงาน/);
-  assert.match(html, /เปิดงาน/);
-  assert.match(html, />วาง Excel<\/button>/);
-  assert.match(html, /วางข้อมูลจาก Excel/);
-  assert.match(html, /ก๊อบตารางจาก Excel/);
-  assert.match(html, /อัปโหลดภาพ Website/);
+  assert.match(html, /<title>Bundle Import · Request Hub<\/title>/i);
+  assert.match(html, /วันนี้ต้องสร้างอะไร/);
+  assert.match(html, /Web Shop/);
+  assert.match(html, /Item Code/);
+  assert.match(html, /Bundle only/);
+  assert.match(html, /งานที่เข้ามา/);
+  assert.match(html, /ค้นหางาน/);
+  assert.match(html, /กรองสถานะ/);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 

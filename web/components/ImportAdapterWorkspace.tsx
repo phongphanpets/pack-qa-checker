@@ -119,6 +119,7 @@ export default function ImportAdapterWorkspace() {
   const lockedCount = [...locked].filter((index) => index < bundles.length).length;
   const selectedCount = lockedCount || bundles.length;
   const exportReview = prepareBundleRows(bundles.filter((_, index) => lockedCount === 0 || locked.has(index)), { catalog, mirrorChance });
+  if (sourceResult && !sourceResult.valid) exportReview.errors.push(...sourceResult.warnings.filter(warning => warning.code === "INVALID_ITEM" || warning.code === "UNSUPPORTED_LAYOUT").map(warning => warning.message));
   if (sourceMode === "manual") items.forEach((item, index) => {
     if (item.chance.trim() && numberOrNull(item.chance) === null) exportReview.errors.push(`รายการ ${index + 1}: Chance ไม่ใช่ตัวเลข`);
   });

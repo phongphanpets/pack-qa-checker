@@ -173,10 +173,10 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
           purchase_limit: resolvedLimit || null,
           source_sheet: sheetTabs.length && selectedTab ? { url: sheetUrl, tab: selectedTab } : null,
           processing: effectiveSummary ? {
-            state: "READY_FOR_REVIEW",
+            state: effectiveResult.valid ? "READY_FOR_REVIEW" : "AWAITING_SOURCE",
             ...effectiveSummary,
             warnings: effectiveResult.warnings.map((warning) => warning.message),
-          } : { state: "AWAITING_SOURCE", warnings: [] },
+          } : { state: "AWAITING_SOURCE", warnings: effectiveResult.warnings.map((warning) => warning.message) },
           auto_rewards: webshopType === "RANDOM" && hasFixed === false ? {
             golden_seed_point: resolvedPrice || null,
             player_exp: resolvedPrice ? Number(resolvedPrice) / 10 : null,

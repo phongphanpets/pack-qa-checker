@@ -2,7 +2,7 @@ import type { PackFormDocument } from "@/components/PackForm";
 import type { SpecBundle } from "@/lib/website-ocr";
 
 export type ExcelPasteWarning = {
-  code: "GENERATED_BUNDLE_ID" | "DATE_WITHOUT_YEAR";
+  code: "GENERATED_BUNDLE_ID" | "DATE_WITHOUT_YEAR" | "UNSUPPORTED_LAYOUT" | "INVALID_ITEM";
   message: string;
 };
 
@@ -59,6 +59,12 @@ type ParsedItem = {
 
 export function parseExcelPaste(input: string): ExcelPasteResult {
   const rows = table(input);
+  const ambiguous = rows.some((row) =>
+    row.filter((cell) => itemIdHeaders.map(normalize).includes(normalize(cell.value))).length > 1 ||
+    row.filter((cell) => amountHeaders.map(normalize).includes(normalize(cell.value))).length > 1 ||
+    row.filter((cell) => chanceHeaders.map(normalize).includes(normalize(cell.value))).length > 1);
+  if (ambiguous) return { document: { bundles: [] }, bundles: [], valid: false, summary: emptySection().summary,
+    warnings: [{ code: "UNSUPPORTED_LAYOUT", message: "พบหลายชุดข้อมูลในแนวนอน หรือหลายคอลัมน์จำนวน/เรท กรุณาแยกทีละวัน ทีละ Tier หรือ Paid/Free ก่อนแปลง เพื่อไม่ให้รายการตกหล่น" }] };
   const headerRows = rows
     .map((row, index) => ({ row, index }))
     .filter(
@@ -88,23 +94,28 @@ export function parseExcelPaste(input: string): ExcelPasteResult {
 
 function parseBareItemSection(rows: Cell[][], originalInput: string) {
   const items: ParsedItem[] = [];
+  const itemWarnings: ExcelPasteWarning[] = [];
   for (const row of rows) {
     for (let index = 0; index <= row.length - 3; index += 1) {
       const [itemId, name, amount] = row.slice(index, index + 3);
       const amountValue = integer(amount?.value);
+      if (looksLikeItemId(itemId?.value) && looksLikeItemName(name?.value) && amountValue === null) {
+        itemWarnings.push({ code: "INVALID_ITEM", message: `แถว ${itemId.row}: จำนวนของ ${clean(name.value)} ไม่ถูกต้อง กรุณาตรวจต้นทาง` });
+        break;
+      }
       if (!looksLikeItemId(itemId?.value) || !looksLikeItemName(name?.value) || amountValue === null) continue;
       items.push({ itemId, name, amount, amountValue, chance: null, chanceValue: null });
       break;
     }
   }
-  if (!items.length) return emptySection();
+  if (!items.length) return { ...emptySection(), warnings: itemWarnings };
 
-  const name = "Untitled Bundle";
+  const name = clean(valueAfterLabel(rows, bundleNameLabels)?.value) || "Untitled Bundle";
   const bundleId = deterministicBundleId(originalInput + "\n" + name + "\nbare-item-list");
   const warnings: ExcelPasteWarning[] = [{
     code: "GENERATED_BUNDLE_ID",
     message: "ไม่พบหัวตารางหรือชื่อ Bundle ระบบอ่านรายการ Item ID / Name / Amt ได้แล้ว แต่ควรตั้งชื่อ Bundle ก่อน Export",
-  }];
+  }, ...itemWarnings];
   const documentItems = items.map((item) => ({
     item_id: field(item.itemId, clean(item.itemId.value)),
     name: field(item.name, clean(item.name.value)),
@@ -132,7 +143,7 @@ function parseBareItemSection(rows: Cell[][], originalInput: string) {
   return {
     documentBundle,
     bundle,
-    valid: true,
+    valid: itemWarnings.length === 0,
     warnings,
     summary: {
       bundleId,
@@ -168,7 +179,7 @@ function parseBundleSection(
       : valueAtLabelColumnOnNextRow(rows, purchaseLimitLabels);
   const resetCell = valueAfterLabel(rows, ["reset", "reset type", "reset_type"]) || valueAtLabelColumnOnNextRow(rows, ["reset", "reset type", "reset_type"]);
   const explicitBundleCell = valueAfterLabel(rows, bundleIdLabels) || valueAtLabelColumnOnNextRow(rows, bundleIdLabels);
-  const items = itemHeaderRow >= 0 ? parseItems(rows, itemHeaderRow) : [];
+  const items = itemHeaderRow >= 0 ? parseItems(rows, itemHeaderRow, warnings) : [];
   const randomItems = items.filter((item) => item.chanceValue !== null);
   const isGacha = randomItems.length > 0;
   const chanceTotal = isGacha ? randomItems.reduce((total, item) => total + (item.chanceValue || 0), 0) : null;
@@ -191,7 +202,7 @@ function parseBundleSection(
   const gspEarn = decimal(gspCell?.value);
   const playerExp = decimal(playerExpCell?.value);
   const purchaseLimit = integer(limitCell?.value);
-  const valid = bundleId !== null && Boolean(name) && items.length > 0 && items.every((item) => Boolean(clean(item.itemId.value)));
+  const valid = bundleId !== null && Boolean(name) && items.length > 0 && items.every((item) => Boolean(clean(item.itemId.value))) && !warnings.some(warning => warning.code === "INVALID_ITEM");
   const documentItems = items.map((item) => ({
     item_id: field(item.itemId, clean(item.itemId.value)),
     name: field(item.name, clean(item.name.value)),
@@ -403,7 +414,7 @@ function parseExcelTsv(input: string): string[][] {
     .filter((parsedRow) => !isMarkdownDivider(parsedRow));
 }
 
-function parseItems(rows: Cell[][], headerRow: number): ParsedItem[] {
+function parseItems(rows: Cell[][], headerRow: number, warnings: ExcelPasteWarning[]): ParsedItem[] {
   const idColumn = findColumn(rows[headerRow], itemIdHeaders);
   const nameColumn = findColumn(rows[headerRow], itemNameHeaders);
   const amountColumn = findColumn(rows[headerRow], amountHeaders);
@@ -423,11 +434,18 @@ function parseItems(rows: Cell[][], headerRow: number): ParsedItem[] {
     const itemId = detected?.itemId || directItemId;
     const name = detected?.name || directName;
     const amount = detected?.amount || directAmount;
-    const chance = chanceColumn >= 0 ? detected?.chance || row[chanceColumn] : null;
+    const offset = detected ? detected.itemId.column - idColumn - 1 : 0;
+    const chance = chanceColumn >= 0 ? row[chanceColumn + offset] : null;
     const amountValue = integer(amount?.value);
     const chanceValue = decimal(chance?.value);
+    if (looksLikeItemId(itemId?.value) && looksLikeItemName(name?.value) && amountValue === null) {
+      warnings.push({ code: "INVALID_ITEM", message: `แถว ${itemId.row}: จำนวนของ ${clean(name.value)} ไม่ถูกต้อง กรุณาตรวจต้นทาง` });
+    }
     if (!itemId?.value && !name?.value && amountValue === null) continue;
     if (!itemId?.value || amountValue === null) continue;
+    if (chanceColumn >= 0 && chanceValue === null && !/fixed|ได้ด้วยเสมอ/i.test(chance?.value || "")) {
+      warnings.push({ code: "INVALID_ITEM", message: `แถว ${itemId.row}: Chance ของ ${clean(name?.value)} ว่างหรือไม่ใช่ตัวเลข ระบุ Fixed หากได้แน่นอน` });
+    }
     items.push({
       itemId,
       name: name || blankCell(itemId.row, nameColumn + 1),
@@ -525,11 +543,15 @@ function valueBelowHeader(
 ): Cell | null {
   const column = findColumn(rows[headerRow], labels);
   if (column < 0) return null;
-  for (const row of rows.slice(headerRow + 1)) {
-    const value = row[column];
-    if (value && clean(value.value)) return value;
-  }
-  return null;
+  const row = rows.slice(headerRow + 1).find(row => row.some(cell => clean(cell.value)));
+  if (!row) return null;
+  const idColumn = findColumn(rows[headerRow], itemIdHeaders);
+  const nameColumn = findColumn(rows[headerRow], itemNameHeaders);
+  const direct = looksLikeItemId(row[idColumn]?.value) && looksLikeItemName(row[nameColumn]?.value);
+  const shifted = direct ? null : findShiftedItem(row);
+  const offset = shifted ? shifted.itemId.column - idColumn - 1 : 0;
+  const value = row[column + offset];
+  return value && clean(value.value) ? value : null;
 }
 
 function findColumn(row: Cell[], labels: string[]) {
@@ -586,7 +608,7 @@ function deterministicBundleId(input: string) {
 
 function integer(value: string | null | undefined): number | null {
   const normalized = clean(value)?.replaceAll(",", "");
-  const match = normalized?.match(/^(?:x|×)?\s*(-?\d+)\b/i);
+  const match = normalized?.match(/^(?:x|×)?\s*(-?\d+)$/i);
   if (!match) return null;
   return Number.parseInt(match[1], 10);
 }

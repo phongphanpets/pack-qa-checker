@@ -103,10 +103,10 @@ export default function ItemCodeRequestForm({ onBack, onOpenAdapter }: Props) {
           condition_operator: "AND",
           source_sheet: sheetTabs.length && selectedTab ? { url: sheetUrl, tab: selectedTab } : null,
           processing: effectiveSummary ? {
-            state: "READY_FOR_REVIEW",
+            state: effectiveParsed.valid ? "READY_FOR_REVIEW" : "AWAITING_SOURCE",
             ...effectiveSummary,
             warnings: effectiveParsed.warnings.map((warning) => warning.message),
-          } : { state: "AWAITING_SOURCE", warnings: [] },
+          } : { state: "AWAITING_SOURCE", warnings: effectiveParsed.warnings.map((warning) => warning.message) },
         },
       };
       const response = await apiFetch(API + "/requests", {
@@ -224,6 +224,7 @@ export default function ItemCodeRequestForm({ onBack, onOpenAdapter }: Props) {
         </section>
         <label><span>ตาราง Item หรือรายละเอียดเพิ่มเติม</span><textarea value={sourceText} onChange={(event) => setSourceText(event.target.value)} placeholder="วางตาราง Item ID, Item Name และ Amt ได้เลย" /></label>
         {summary && <div className="processing-summary"><div><b>อ่านตารางได้แล้ว</b><span>{summary.bundles} Bundles · {summary.items} Items พร้อมตรวจต่อ</span></div></div>}
+        {parsed.warnings.filter(warning => warning.code === "INVALID_ITEM" || warning.code === "UNSUPPORTED_LAYOUT").map((warning, index) => <p className="source-warning" key={index}>{warning.message}</p>)}
         <label><span>ไฟล์ประกอบ</span><input type="file" multiple accept=".xlsx,.xls,.csv,.txt,.md,image/*" onChange={(event) => void chooseAttachments(Array.from(event.target.files || []))} /><small>{attachments.length ? attachments.map((file) => file.name).join(", ") : "แนบ Excel, CSV, Text หรือภาพ Request ได้"}</small></label>
         {attachmentTabs.length > 0 && <div className="sheet-tab-row"><select aria-label="เลือกแท็บจากไฟล์ประกอบ" value={selectedAttachmentTab} onChange={(event) => setSelectedAttachmentTab(event.target.value)}>{attachmentTabs.map((tab) => <option value={tab.name} key={tab.name}>{tab.name}</option>)}</select><button type="button" className="secondary-button" onClick={useAttachmentTab}>{loadingAttachment ? "กำลังอ่าน..." : "ใช้แท็บนี้"}</button><small>{attachmentTabs.length} แท็บ · ข้อมูลจะถูกใส่ในช่องตารางด้านบน</small></div>}
         <button type="button" className="primary-button" disabled={saving || Boolean(success)} onClick={() => void submit()}>{saving ? "กำลังสร้าง..." : success ? "กำลังเปิด Adapter..." : "สร้าง Request และ Review Bundle"}</button>

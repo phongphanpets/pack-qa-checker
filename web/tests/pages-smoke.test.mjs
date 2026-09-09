@@ -36,6 +36,12 @@ test("Pages renders connection and parses a pasted bundle without a server", asy
     await textarea.fill("1315002\tGod Fellow Ticket\t31");
     await page.waitForFunction(() => !document.querySelector(".bundle-preview-top input[type=checkbox]")?.checked);
     assert.equal(await selection.isChecked(), false, "Editing bundle contents must invalidate its old lock");
+    await textarea.fill("Bundle Name\tInvalid demo\nItem ID\tItem Name\tAmt\tChance\n51201\tLanistar Key\t1\t100\n52001\tMemory Key\t1\t");
+    assert.equal(await page.getByRole("button", { name: /Export Import file/ }).isDisabled(), true, "Missing rates must block partial exports");
+    await textarea.fill("Item ID\tItem Name\tAmt\tAmt\tAmt\n51201\tLanistar Key\t100\t70\t50");
+    await page.getByText(/พบหลายชุดข้อมูลในแนวนอน/).first().waitFor();
+    assert.equal(await page.getByRole("button", { name: /Export Import file/ }).count(), 0);
+    await textarea.fill("1315002\tGod Fellow Ticket\t31");
     await mkdir("../outputs/pages-review", { recursive: true });
     await page.screenshot({ path: "../outputs/pages-review/desktop.png", fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
