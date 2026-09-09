@@ -113,12 +113,16 @@ export default function ImportAdapterWorkspace() {
   const bundles = sourceMode === "manual" && !autoRewards ? parsedBundles : expandBundleRewards(rewardSource, autoRewards);
   const bundleSignature = JSON.stringify(bundles);
   const locked = lockState.signature === bundleSignature ? lockState.indexes : new Set<number>();
+  const selectionStarted = lockState.signature !== "";
+  const staleSelection = selectionStarted && lockState.signature !== bundleSignature;
   function setLocked(value: Set<number> | ((current: Set<number>) => Set<number>)) {
     setLockState({ signature: bundleSignature, indexes: typeof value === "function" ? value(locked) : value });
   }
-  const lockedCount = [...locked].filter((index) => index < bundles.length).length;
-  const selectedCount = lockedCount || bundles.length;
-  const exportReview = prepareBundleRows(bundles.filter((_, index) => lockedCount === 0 || locked.has(index)), { catalog, mirrorChance });
+  const includedBundles = staleSelection ? [] : bundles.filter((_, index) => !selectionStarted || locked.has(index));
+  const selectedCount = includedBundles.length;
+  const exportReview = prepareBundleRows(includedBundles, { catalog, mirrorChance });
+  if (staleSelection) exportReview.errors.push("ข้อมูลเปลี่ยนหลังล็อก กรุณาเลือก Bundle ที่ต้องการส่งออกใหม่");
+  else if (selectionStarted && !selectedCount) exportReview.errors.push("กรุณาเลือกอย่างน้อยหนึ่ง Bundle ก่อนส่งออก");
   if (sourceResult && !sourceResult.valid) exportReview.errors.push(...sourceResult.warnings.filter(warning => warning.code === "INVALID_ITEM" || warning.code === "UNSUPPORTED_LAYOUT").map(warning => warning.message));
   if (sourceMode === "manual") items.forEach((item, index) => {
     if (item.chance.trim() && numberOrNull(item.chance) === null) exportReview.errors.push(`รายการ ${index + 1}: Chance ไม่ใช่ตัวเลข`);
@@ -128,6 +132,21 @@ export default function ImportAdapterWorkspace() {
     if (screen !== "adapter") return;
     const source = window.localStorage.getItem("bundle-import-request-source") || "";
     const rawRequest = window.localStorage.getItem("bundle-import-request");
+    setSourceMode("paste");
+    setPasteValue(source);
+    setBundleName("");
+    setBareBundleName("");
+    setExportName("bundle-import");
+    setPrice("");
+    setLimit("");
+    setItems([emptyItem(1)]);
+    setNextItemKey(2);
+    setSheetTabs([]);
+    setSelectedSheetTab("");
+    setSheetFileName("");
+    setSheetError("");
+    setExportError("");
+    setLockState({ signature: "", indexes: new Set() });
     try {
       const request = rawRequest ? JSON.parse(rawRequest) : null;
       setRequestId(String(request?.id || ""));
@@ -158,9 +177,6 @@ export default function ImportAdapterWorkspace() {
       setRequestType(null);
       setItemCodeDetails(null);
     }
-    if (!source) return;
-    setSourceMode("paste");
-    setPasteValue(source);
     window.localStorage.removeItem("bundle-import-request-source");
     window.localStorage.removeItem("bundle-import-request");
   }, [screen]);
@@ -222,10 +238,11 @@ export default function ImportAdapterWorkspace() {
   }
 
   async function downloadImport() {
+    if (exportReview.errors.length) { setExportError(exportReview.errors.join(" · ")); return; }
     setExportError("");
     setExporting(true);
     try {
-    const included = bundles.filter((_, index) => lockedCount === 0 || locked.has(index));
+    const included = includedBundles;
     const filename = safeFilename(exportName || bundleName || included[0]?.name || "bundle-import") + (splitFiles ? ".zip" : ".xlsx");
     const response = await apiFetch("/api/bundle-import", {
       method: "POST",
@@ -286,7 +303,7 @@ export default function ImportAdapterWorkspace() {
         </>}
       </aside>
     </section>
-    {bundles.length > 0 && requestType !== "ITEM_CODE" && <ProductExportPanel requestId={requestId} productName={exportName || bundleName} bundles={bundles} selectedIndexes={locked} fallbackPrice={price || String(bundles[0]?.seed_point ?? "")} fallbackLimit={limit || String(bundles[0]?.purchase_limit ?? "")} />}
+    {selectedCount > 0 && requestType !== "ITEM_CODE" && <ProductExportPanel requestId={requestId} productName={exportName || bundleName} bundles={bundles} selectedIndexes={locked} fallbackPrice={price || String(bundles[0]?.seed_point ?? "")} fallbackLimit={limit || String(bundles[0]?.purchase_limit ?? "")} />}
     {bundles.length > 0 && <section className="adapter-validation"><div className="section-heading"><div><p className="eyebrow">Step 3</p><h2>ตรวจ Item ก่อน Export</h2></div><p>เทียบกับ Data กลางเพื่อลด Item ID หรือชื่อที่ไม่ตรง</p></div><ItemCatalogCheck bundles={bundles} onCatalogChange={setCatalog} /></section>}
   </main>;
 }

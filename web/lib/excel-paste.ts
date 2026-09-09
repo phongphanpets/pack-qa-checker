@@ -96,7 +96,7 @@ function parseBareItemSection(rows: Cell[][], originalInput: string) {
   const items: ParsedItem[] = [];
   const itemWarnings: ExcelPasteWarning[] = [];
   for (const row of rows) {
-    for (let index = 0; index <= row.length - 3; index += 1) {
+    for (let index = 0; index <= row.length - 2; index += 1) {
       const [itemId, name, amount] = row.slice(index, index + 3);
       const amountValue = integer(amount?.value);
       if (looksLikeItemId(itemId?.value) && looksLikeItemName(name?.value) && amountValue === null) {
@@ -438,11 +438,18 @@ function parseItems(rows: Cell[][], headerRow: number, warnings: ExcelPasteWarni
     const chance = chanceColumn >= 0 ? row[chanceColumn + offset] : null;
     const amountValue = integer(amount?.value);
     const chanceValue = decimal(chance?.value);
+    if (!clean(itemId?.value) && looksLikeItemName(name?.value) && amountValue !== null) {
+      warnings.push({ code: "INVALID_ITEM", message: `แถว ${name.row}: ไม่พบ Item ID ของ ${clean(name.value)} กรุณาตรวจต้นทาง` });
+    }
     if (looksLikeItemId(itemId?.value) && looksLikeItemName(name?.value) && amountValue === null) {
       warnings.push({ code: "INVALID_ITEM", message: `แถว ${itemId.row}: จำนวนของ ${clean(name.value)} ไม่ถูกต้อง กรุณาตรวจต้นทาง` });
     }
     if (!itemId?.value && !name?.value && amountValue === null) continue;
     if (!itemId?.value || amountValue === null) continue;
+    const secretChanceCell = secretChanceColumn >= 0 ? row[secretChanceColumn + offset] : null;
+    if (clean(secretChanceCell?.value) && decimal(secretChanceCell?.value) === null) {
+      warnings.push({ code: "INVALID_ITEM", message: `แถว ${itemId.row}: Secret Chance ของ ${clean(name?.value)} ไม่ใช่ตัวเลข` });
+    }
     if (chanceColumn >= 0 && chanceValue === null && !/fixed|ได้ด้วยเสมอ/i.test(chance?.value || "")) {
       warnings.push({ code: "INVALID_ITEM", message: `แถว ${itemId.row}: Chance ของ ${clean(name?.value)} ว่างหรือไม่ใช่ตัวเลข ระบุ Fixed หากได้แน่นอน` });
     }

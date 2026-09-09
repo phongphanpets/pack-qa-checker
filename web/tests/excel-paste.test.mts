@@ -294,6 +294,25 @@ test("Markdown escaped currencies and thousands quantities survive", () => {
   assert.deepEqual(result.bundles[0].items.map(item => [item.item_id, item.amount]), [["Gold_Cur", 1500], ["Popo_Fellow_1", 30]]);
 });
 
+test("missing ID or truncated headerless quantity blocks partial results", () => {
+  for (const input of [
+    "Bundle Name\tDemo\n1315001\tFellow Ticket\t2\n52001\tMemory Key",
+    "Bundle Name\tDemo\nItem ID\tItem Name\tAmt\n1315001\tFellow Ticket\t2\n\tMemory Key\t3",
+  ]) {
+    const result = parseExcelPaste(input);
+    assert.equal(result.valid, false);
+    assert.ok(result.warnings.some(warning => warning.code === "INVALID_ITEM"));
+  }
+});
+
+test("invalid Secret Chance is rejected while blank and zero remain valid", () => {
+  for (const rate of ["oops", "", "0", "25.5"]) {
+    const result = parseExcelPaste("Bundle Name\tDemo\nItem ID\tItem Name\tAmt\tChance\tSecret Chance\n1315001\tFellow Ticket\t2\t100\t" + rate);
+    assert.equal(result.valid, rate !== "oops");
+    if (rate === "oops") assert.ok(result.warnings.some(warning => warning.message.includes("Secret Chance")));
+  }
+});
+
 test("keeps all items when copied Flash Sale rows shift left after the first row", () => {
   const result = parseExcelPaste(
     `🔥FLASH SALE\tProduct Name\tเสวเสาร์ : ก็แค่อยากเป็นสาวเวียด\tStart\t5 Sep\t00.01 น.\tReset\tNo Reset\tLimit (ครั้ง / ID)\tTotal Paid
