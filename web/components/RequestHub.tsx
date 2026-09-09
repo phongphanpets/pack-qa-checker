@@ -44,6 +44,10 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
   const [requests, setRequests] = useState<HubRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [pendingStatuses, setPendingStatuses] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [webshopType, setWebshopType] = useState<WebshopType | null>(null);
   const [hasFixed, setHasFixed] = useState<boolean | null>(null);
@@ -56,6 +60,10 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
   const [selectedTab, setSelectedTab] = useState("");
   const [loadingSheet, setLoadingSheet] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const filteredRequests = requests.filter((request) =>
+    (!statusFilter || request.status === statusFilter) &&
+    (!typeFilter || request.request_type === typeFilter) &&
+    [request.title, request.id, request.requester].join(" ").toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const sourceResult = useMemo(() => parseExcelPaste(sourceText), [sourceText]);
   const sourceSummary = sourceResult.bundles.length ? {
     bundles: sourceResult.bundles.length,
@@ -132,12 +140,13 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
 
   async function createRequest() {
     if (!title.trim() || !webshopType) return setError("กรอกชื่อ และเลือกประเภท Web Shop ให้ครบก่อนส่ง");
+    if (webshopType === "RANDOM" && hasFixed === null) return setError("เลือกก่อนว่าสินค้าสุ่มมี Fixed rewards หรือไม่");
     setSaving(true);
     setError("");
     let payload: Record<string, unknown> | undefined;
     try {
       const importedFileText = sourceText.trim() ? "" : await sourceTextFromAttachments(attachments);
-      const effectiveSourceText = sourceText || importedFileText;
+      const effectiveSourceText = sourceText.trim() ? sourceText : importedFileText;
       const effectiveResult = parseExcelPaste(effectiveSourceText);
       const effectiveSummary = effectiveResult.bundles.length ? {
         bundles: effectiveResult.bundles.length,
@@ -147,6 +156,8 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
       } : null;
       const resolvedPrice = price.trim() || (effectiveResult.summary.seedPoint === null ? "" : String(effectiveResult.summary.seedPoint));
       const resolvedLimit = limit.trim() || (effectiveResult.summary.purchaseLimit === null ? "" : String(effectiveResult.summary.purchaseLimit));
+      if (resolvedPrice && (!Number.isFinite(Number(resolvedPrice)) || Number(resolvedPrice) < 0)) throw new Error("Seed Point ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป");
+      if (resolvedLimit && (!Number.isSafeInteger(Number(resolvedLimit)) || Number(resolvedLimit) < 1)) throw new Error("Purchase limit per player ต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป หรือเว้นว่าง");
       payload = {
         title,
         request_type: "WEB_SHOP",
@@ -199,6 +210,8 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
   }
 
   async function moveStatus(id: string, status: RequestStatus) {
+    setPendingStatuses((current) => new Set(current).add(id));
+    setError("");
     try {
       const response = await apiFetch(API + "/requests/" + id + "/status", {
         method: "POST",
@@ -219,6 +232,8 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
       } else {
         setError(caught instanceof Error ? caught.message : "อัปเดตสถานะไม่สำเร็จ");
       }
+    } finally {
+      setPendingStatuses((current) => { const next = new Set(current); next.delete(id); return next; });
     }
   }
 
@@ -250,9 +265,15 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
       </div>
       <section className="request-history">
         <div className="section-heading"><div><p className="eyebrow">History</p><h2>งานที่เข้ามา</h2></div><p>{loading ? "กำลังโหลด..." : requests.length + " Requests"}</p></div>
+        <div className="request-filters">
+          <label>ค้นหางาน<input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ชื่องาน / เลข Request / ผู้ขอ" /></label>
+          <label>ประเภทงาน<select aria-label="ประเภทงาน" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="">ทุกประเภท</option><option value="WEB_SHOP">Web Shop</option><option value="ITEM_CODE">Item Code</option></select></label>
+          <label>กรองสถานะ<select aria-label="กรองสถานะ" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">ทุกสถานะ</option>{Object.entries(labels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+        </div>
         {error && <p className="hub-error">{error}</p>}
         {!loading && !requests.length && <div className="hub-empty"><b>ยังไม่มี Request</b><span>เริ่มจากเลือก Web Shop หรือ Item Code ด้านบน</span></div>}
-        <div className="request-list">{requests.map((item) => <RequestRow key={item.id} request={item} onStatus={moveStatus} onOpen={openInAdapter} />)}</div>
+        {!loading && requests.length > 0 && filteredRequests.length === 0 && <p role="status">ไม่พบงานที่ตรงกับการค้นหา</p>}
+        <div className="request-list">{filteredRequests.map((item) => <RequestRow key={item.id} request={item} pending={pendingStatuses.has(item.id)} onStatus={moveStatus} onOpen={openInAdapter} />)}</div>
       </section>
     </section> : <WebShopForm title={title} price={price} limit={limit} webshopType={webshopType} hasFixed={hasFixed} sourceText={sourceText} sourceSummary={sourceSummary} warnings={sourceResult.warnings.map((warning) => warning.message)} sheetUrl={sheetUrl} sheetTabs={sheetTabs} selectedTab={selectedTab} loadingSheet={loadingSheet} attachments={attachments} saving={saving} error={error} onBack={() => setView("list")} onTitle={setTitle} onPrice={setPrice} onLimit={setLimit} onType={setWebshopType} onFixed={setHasFixed} onSource={setSourceText} onSheetUrl={setSheetUrl} onLoadTabs={loadSheetTabs} onSelectedTab={setSelectedTab} onUseTab={useSheetTab} onAttachments={setAttachments} onSubmit={createRequest} />}
   </main>;
@@ -314,7 +335,7 @@ function WebShopForm(props: {
         <label><span>Seed Point</span><input inputMode="decimal" value={props.price} onChange={(event) => props.onPrice(event.target.value)} placeholder="เช่น 590" /></label>
         <label><span>Purchase limit per player</span><input inputMode="numeric" value={props.limit} onChange={(event) => props.onLimit(event.target.value)} placeholder="เช่น 1" /></label>
       </div>
-      {props.webshopType === "RANDOM" && props.price && <div className="auto-reward-note"><b>ระบบจะเพิ่ม Fixed rewards</b><span>Golden Seed Point {props.price} · Player EXP {autoExp}</span></div>}
+      {props.webshopType && props.price.trim() && Number.isFinite(Number(props.price)) && Number(props.price) >= 0 && <div className="auto-reward-note"><b>ระบบจะเพิ่ม Fixed rewards</b><span>Golden Seed Point {props.price} · Player EXP {autoExp}</span></div>}
       <section className="sheet-source"><div><b>ดึงจาก Google Sheet</b><span>วางลิงก์ครั้งเดียว แล้วเลือกแท็บที่จะใช้</span></div>
         <div className="sheet-url-row"><input value={props.sheetUrl} onChange={(event) => props.onSheetUrl(event.target.value)} placeholder="https://docs.google.com/spreadsheets/d/..." /><button type="button" className="quiet-button" disabled={props.loadingSheet} onClick={props.onLoadTabs}>{props.loadingSheet ? "กำลังอ่าน..." : "อ่านแท็บ"}</button></div>
         {props.sheetTabs.length > 0 && <div className="sheet-tab-row"><select aria-label="เลือกแท็บ Google Sheet" value={props.selectedTab} onChange={(event) => props.onSelectedTab(event.target.value)}>{props.sheetTabs.map((tab) => <option key={tab.name} value={tab.name}>{tab.name}</option>)}</select><button type="button" className="secondary-button" onClick={props.onUseTab}>ใช้แท็บนี้</button><small>{props.sheetTabs.length} แท็บ · ข้อมูลจะถูกนำไปใส่ในช่องตารางด้านล่าง</small></div>}
@@ -331,14 +352,14 @@ function WebShopForm(props: {
   </section>;
 }
 
-function RequestRow({ request, onStatus, onOpen }: { request: HubRequest; onStatus: (id: string, status: RequestStatus) => Promise<void>; onOpen: (id: string) => Promise<void> }) {
+function RequestRow({ request, pending, onStatus, onOpen }: { request: HubRequest; pending: boolean; onStatus: (id: string, status: RequestStatus) => Promise<void>; onOpen: (id: string) => Promise<void> }) {
   const detail = request.webshop_type === "RANDOM" ? "Random · " + (request.fixed_rewards ? "มี Fixed" : "Auto Fixed GSP + EXP") : request.webshop_type === "NORMAL" ? "Normal Bundle" : String(request.payload.code_kind || "Code");
   return <article className="request-row">
     <div className="request-id"><b>{request.request_type === "WEB_SHOP" ? "Web Shop" : "Item Code"}</b><span>{request.id}</span></div>
     <div className="request-title"><strong>{request.title}</strong><span>{detail}{request.attachments?.length ? " · " + request.attachments.length + " files" : ""}</span><RequestArtifacts request={request} /></div>
     <div className={"request-status status-" + request.status.toLowerCase()}>{labels[request.status] || "งานใหม่"}</div>
     <time>{new Date(request.updated_at).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })}</time>
-    <select aria-label={"สถานะ " + request.title} value={request.status} onChange={(event) => void onStatus(request.id, event.target.value as RequestStatus)}>{Object.entries(labels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select>
+    <select disabled={pending} aria-label={"สถานะ " + request.title} value={request.status} onChange={(event) => void onStatus(request.id, event.target.value as RequestStatus)}>{Object.entries(labels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select>
     <button type="button" className="quiet-button" onClick={() => void onOpen(request.id)}>เปิดใน Adapter</button>
   </article>;
 }
@@ -351,6 +372,7 @@ function RequestArtifacts({ request }: { request: HubRequest }) {
   const [downloadError, setDownloadError] = useState("");
   const exports = Array.isArray(request.payload.exports) ? request.payload.exports.filter((item): item is { id: string; filename: string; type: string } => Boolean(item && typeof item === "object" && "id" in item && "filename" in item)) : [];
   return <details className="request-artifacts"><summary>ประวัติและไฟล์ ({exports.length})</summary>
+    <p>Discord: {({ SENT: "แจ้งแล้ว", FAILED: "แจ้งไม่สำเร็จ", PENDING: "รอแจ้ง", NOT_CONFIGURED: "ยังไม่ได้ตั้งค่า Webhook", LOCAL_ONLY: "งานในเครื่อง ยังไม่ได้แจ้ง" } as Record<string, string>)[request.notification_status] || "ยังไม่มีข้อมูล"}</p>
     {exports.map((artifact) => <button type="button" className="quiet-button" key={artifact.id} onClick={() => { setDownloadError(""); void downloadApiFile(API + "/requests/" + encodeURIComponent(request.id) + "/exports/" + encodeURIComponent(artifact.id), artifact.filename).catch(error => setDownloadError(error.message)); }}>{artifact.type === "PRODUCT_IMPORT" ? "Product" : "Bundle"}: {artifact.filename}</button>)}
     {downloadError && <p role="alert">{downloadError}</p>}
     <ol>{(request.history || []).map((event, index) => <li key={index}><time>{new Date(event.at).toLocaleString("th-TH")}</time>{" · "}{event.type === "EXPORTED" ? "Export " + event.filename : event.type === "CREATED" ? "สร้าง Request" : `${event.from ? labels[event.from] || event.from : ""} → ${event.to ? labels[event.to] || event.to : ""}`}</li>)}</ol>

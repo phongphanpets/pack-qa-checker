@@ -70,12 +70,15 @@ export default function ItemCodeRequestForm({ onBack, onOpenAdapter }: Props) {
 
   async function submit() {
     if (!title.trim()) return setError("กรอกชื่องานก่อนส่ง");
+    for (const [label, value] of [["ใช้ได้ต่อ User", perUserLimit], ["จำนวนครั้งรวมของ Code", redeemLimit]]) {
+      if (value.trim() && (!Number.isSafeInteger(Number(value)) || Number(value) < 1)) return setError(label + " ต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป หรือเว้นว่าง");
+    }
     setSaving(true);
     setError("");
     let payload: Record<string, unknown> | undefined;
     try {
       const importedFileText = sourceText.trim() ? "" : await sourceTextFromAttachments(attachments);
-      const effectiveSourceText = itemCodeBundleSource(sourceText || importedFileText, title);
+      const effectiveSourceText = itemCodeBundleSource(sourceText.trim() ? sourceText : importedFileText, title);
       const effectiveParsed = parseExcelPaste(effectiveSourceText);
       const effectiveSummary = effectiveParsed.bundles.length ? {
         bundles: effectiveParsed.bundles.length,
@@ -194,10 +197,10 @@ export default function ItemCodeRequestForm({ onBack, onOpenAdapter }: Props) {
         <label><span>ชื่องาน / ชื่อ Bundle</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="เช่น Streamer itemcode 6/9 #1" /></label>
         <fieldset><legend>ประเภท Code</legend><div className="decision-cards compact">
           <Choice active={kind === "MASTER"} title="Master Code" detail="ทุกคนใช้ Code เดียวกัน" onClick={() => setKind("MASTER")} />
-          <Choice active={kind === "UNIQUE"} title="Unique Code" detail="สร้าง Code แยกต่อผู้ใช้" onClick={() => setKind("UNIQUE")} />
+          <Choice active={kind === "UNIQUE"} title="Unique Code" detail="ใช้ Code แยกต่อผู้ใช้" onClick={() => setKind("UNIQUE")} />
         </div></fieldset>
         <div className="request-fields">
-          <Field label="Code Serial" value={serial} onChange={setSerial} placeholder="เว้นว่างได้หากให้ระบบสร้าง" />
+          <Field label="Code Serial" value={serial} onChange={setSerial} placeholder="เว้นว่างได้หากยังไม่กำหนด Code" />
           <Field label="ใช้ได้ต่อ User" value={perUserLimit} onChange={setPerUserLimit} placeholder="1" />
           <Field label="เริ่มใช้งาน" value={startAt} onChange={setStartAt} placeholder="เช่น 6 Sep 18.30 น." />
           <Field label="หมดอายุ" value={endAt} onChange={setEndAt} placeholder="เช่น 9 Sep 12.00 น." />
