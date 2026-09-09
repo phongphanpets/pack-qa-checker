@@ -83,7 +83,7 @@ export default function ImportAdapterWorkspace() {
   const [limit, setLimit] = useState("");
   const [items, setItems] = useState<ManualItem[]>([emptyItem(1)]);
   const [nextItemKey, setNextItemKey] = useState(2);
-  const [locked, setLocked] = useState<Set<number>>(new Set());
+  const [lockState, setLockState] = useState<{ signature: string; indexes: Set<number> }>({ signature: "", indexes: new Set() });
   const [sheetFileName, setSheetFileName] = useState("");
   const [sheetTabs, setSheetTabs] = useState<SpreadsheetTab[]>([]);
   const [selectedSheetTab, setSelectedSheetTab] = useState("");
@@ -111,6 +111,11 @@ export default function ImportAdapterWorkspace() {
     ? [{ ...parsedBundles[0], name: bundleName || autoRewards.title, items: parsedBundles.flatMap(bundle => bundle.items) }]
     : parsedBundles;
   const bundles = sourceMode === "manual" && !autoRewards ? parsedBundles : expandBundleRewards(rewardSource, autoRewards);
+  const bundleSignature = JSON.stringify(bundles);
+  const locked = lockState.signature === bundleSignature ? lockState.indexes : new Set<number>();
+  function setLocked(value: Set<number> | ((current: Set<number>) => Set<number>)) {
+    setLockState({ signature: bundleSignature, indexes: typeof value === "function" ? value(locked) : value });
+  }
   const lockedCount = [...locked].filter((index) => index < bundles.length).length;
   const selectedCount = lockedCount || bundles.length;
   const exportReview = prepareBundleRows(bundles.filter((_, index) => lockedCount === 0 || locked.has(index)), { catalog, mirrorChance });

@@ -30,6 +30,12 @@ test("Pages renders connection and parses a pasted bundle without a server", asy
     const textarea = page.locator("textarea").first();
     await textarea.fill("1315002\tGod Fellow Ticket\t30");
     await page.getByText("God Fellow Ticket", { exact: true }).first().waitFor();
+    const selection = page.locator(".bundle-preview-top input[type=checkbox]").first();
+    await selection.check();
+    assert.equal(await selection.isChecked(), true);
+    await textarea.fill("1315002\tGod Fellow Ticket\t31");
+    await page.waitForFunction(() => !document.querySelector(".bundle-preview-top input[type=checkbox]")?.checked);
+    assert.equal(await selection.isChecked(), false, "Editing bundle contents must invalidate its old lock");
     await mkdir("../outputs/pages-review", { recursive: true });
     await page.screenshot({ path: "../outputs/pages-review/desktop.png", fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });

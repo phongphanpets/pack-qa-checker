@@ -54,6 +54,7 @@ type ParsedItem = {
   amountValue: number;
   chance: Cell | null;
   chanceValue: number | null;
+  secretChanceValue?: number | null;
 };
 
 export function parseExcelPaste(input: string): ExcelPasteResult {
@@ -218,7 +219,7 @@ function parseBundleSection(
   };
   const bundle: SpecBundle | null = bundleId === null ? null : {
     bundle_id: bundleId, name, seed_point: seedPoint, gsp_earn: gspEarn, player_exp: playerExp, purchase_limit: purchaseLimit, is_gacha: isGacha, is_permanent: isPermanent,
-    items: items.map((item) => ({ item_id: clean(item.itemId.value), name: clean(item.name.value), amount: item.amountValue, chance: item.chanceValue })),
+    items: items.map((item) => ({ item_id: clean(item.itemId.value), name: clean(item.name.value), amount: item.amountValue, chance: item.chanceValue, ...(item.secretChanceValue !== undefined ? { secret_chance: item.secretChanceValue } : {}) })),
   };
   return { documentBundle, bundle, valid, warnings, summary: { bundleId, generatedBundleId, name, itemCount: items.length, seedPoint, gspEarn, playerExp, purchaseLimit, isGacha, isPermanent, fixedItemCount: items.length - randomItems.length, randomOutcomeCount: randomItems.length, chanceTotal } };
 }
@@ -407,6 +408,7 @@ function parseItems(rows: Cell[][], headerRow: number): ParsedItem[] {
   const nameColumn = findColumn(rows[headerRow], itemNameHeaders);
   const amountColumn = findColumn(rows[headerRow], amountHeaders);
   const chanceColumn = findColumn(rows[headerRow], chanceHeaders);
+  const secretChanceColumn = findColumn(rows[headerRow], ["secret chance", "secret_chance", "display chance", "เรทโชว์"]);
   const items: ParsedItem[] = [];
 
   for (const row of rows.slice(headerRow + 1)) {
@@ -421,7 +423,7 @@ function parseItems(rows: Cell[][], headerRow: number): ParsedItem[] {
     const itemId = detected?.itemId || directItemId;
     const name = detected?.name || directName;
     const amount = detected?.amount || directAmount;
-    const chance = detected?.chance || (chanceColumn >= 0 ? row[chanceColumn] : null);
+    const chance = chanceColumn >= 0 ? detected?.chance || row[chanceColumn] : null;
     const amountValue = integer(amount?.value);
     const chanceValue = decimal(chance?.value);
     if (!itemId?.value && !name?.value && amountValue === null) continue;
@@ -433,6 +435,7 @@ function parseItems(rows: Cell[][], headerRow: number): ParsedItem[] {
       amountValue,
       chance,
       chanceValue,
+      ...(secretChanceColumn >= 0 ? { secretChanceValue: decimal(row[secretChanceColumn + (detected ? detected.itemId.column - idColumn - 1 : 0)]?.value) } : {}),
     });
   }
   return items;

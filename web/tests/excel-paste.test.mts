@@ -227,6 +227,18 @@ test("preserves fractional Seed Point, GSP and Player EXP", () => {
   assert.equal(result.bundles[0].player_exp, 59.5);
 });
 
+test("shifted rows without a Chance header never treat price as a random rate", () => {
+  const result = parseExcelPaste("Product Name\tFixed pack\nIMG\tItem ID\tItem Name\tAmt\tTP\n\t51201\tLanistar Key\t2\t10\n52001\tMemory Stone Key Selection\t3\t50");
+  assert.equal(result.bundles[0].items.length, 2);
+  assert.ok(result.bundles[0].items.every(item => item.chance === null));
+  assert.equal(result.bundles[0].is_gacha, false);
+});
+
+test("preserves distinct Chance and Secret Chance in direct and shifted rows", () => {
+  const result = parseExcelPaste("Product Name\tTwo rates\nIMG\tItem ID\tItem Name\tAmt\tChance\tSecret Chance\n\t51201\tLanistar Key\t2\t10\t20\n52001\tMemory Stone Key Selection\t3\t90\t80");
+  assert.deepEqual(result.bundles[0].items.map(item => [item.chance, item.secret_chance]), [[10, 20], [90, 80]]);
+});
+
 test("recognizes Cost Chance as a random chance column", () => {
   const result = parseExcelPaste(
     `Bundle Name\tWheel Rewards
