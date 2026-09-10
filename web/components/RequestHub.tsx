@@ -52,8 +52,12 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
   const [webshopType, setWebshopType] = useState<WebshopType | null>(null);
   const [hasFixed, setHasFixed] = useState<boolean | null>(null);
   const [title, setTitle] = useState("");
-  const [price, setPrice] = useState("");
-  const [limit, setLimit] = useState("");
+  const [price, updatePrice] = useState("");
+  const [limit, updateLimit] = useState("");
+  const [priceEdited, setPriceEdited] = useState(false);
+  const [limitEdited, setLimitEdited] = useState(false);
+  function setPrice(value: string) { setPriceEdited(true); updatePrice(value); }
+  function setLimit(value: string) { setLimitEdited(true); updateLimit(value); }
   const [sourceText, setSourceText] = useState("");
   const [sheetUrl, setSheetUrl] = useState("");
   const [sheetTabs, setSheetTabs] = useState<SheetTab[]>([]);
@@ -73,6 +77,10 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
   } : null;
 
   useEffect(() => { void loadRequests(); }, []);
+  useEffect(() => {
+    if (!priceEdited) updatePrice(sourceResult.summary.seedPoint == null ? "" : String(sourceResult.summary.seedPoint));
+    if (!limitEdited) updateLimit(sourceResult.summary.purchaseLimit == null ? "" : String(sourceResult.summary.purchaseLimit));
+  }, [sourceResult, priceEdited, limitEdited]);
 
   async function loadRequests() {
     setLoading(true);
@@ -95,8 +103,10 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
     setWebshopType(null);
     setHasFixed(null);
     setTitle("");
-    setPrice("");
-    setLimit("");
+    updatePrice("");
+    updateLimit("");
+    setPriceEdited(false);
+    setLimitEdited(false);
     setSourceText("");
     setSheetUrl("");
     setSheetTabs([]);
@@ -154,8 +164,8 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
         random: effectiveResult.bundles.filter((bundle) => bundle.is_gacha).length,
         items: effectiveResult.bundles.reduce((total, bundle) => total + bundle.items.length, 0),
       } : null;
-      const resolvedPrice = price.trim() || (effectiveResult.summary.seedPoint === null ? "" : String(effectiveResult.summary.seedPoint));
-      const resolvedLimit = limit.trim() || (effectiveResult.summary.purchaseLimit === null ? "" : String(effectiveResult.summary.purchaseLimit));
+      const resolvedPrice = priceEdited ? price.trim() : effectiveResult.summary.seedPoint == null ? "" : String(effectiveResult.summary.seedPoint);
+      const resolvedLimit = limitEdited ? limit.trim() : effectiveResult.summary.purchaseLimit == null ? "" : String(effectiveResult.summary.purchaseLimit);
       if (resolvedPrice && (!Number.isFinite(Number(resolvedPrice)) || Number(resolvedPrice) < 0)) throw new Error("Seed Point ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป");
       if (resolvedLimit && (!Number.isSafeInteger(Number(resolvedLimit)) || Number(resolvedLimit) < 1)) throw new Error("Purchase limit per player ต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป หรือเว้นว่าง");
       payload = {
