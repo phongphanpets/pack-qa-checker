@@ -20,8 +20,8 @@ export default function Connection() {
     finally { setBusy(false); }
   }
   return <details className="server-connection" open={!current.endpoint}>
-    <summary>เซิร์ฟเวอร์ History และ Export</summary>
-    {!current.endpoint && <p>ยังไม่ได้เชื่อมต่อเซิร์ฟเวอร์ของทีม จึงยังบันทึก History ส่วนกลาง อ่าน Excel หรือ Export ไฟล์ไม่ได้</p>}
+    <summary>เซิร์ฟเวอร์ Request และ History</summary>
+    {!current.endpoint && <p>Bundle only วางตารางและ Export ได้โดยไม่เชื่อม Server ส่วนการส่ง Request, History ส่วนกลาง และอ่านไฟล์ Excel ยังต้องเชื่อมต่อ</p>}
     <div className="request-fields">
       <label>URL เซิร์ฟเวอร์<input type="url" value={endpoint} onChange={e => setEndpoint(e.target.value)} placeholder="https://..." /></label>
       <label>รหัสเข้าถึง<input type="password" autoComplete="off" value={token} onChange={e => setToken(e.target.value)} /></label>

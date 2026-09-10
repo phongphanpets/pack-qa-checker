@@ -16,7 +16,7 @@ Scope: Request intake and Bundle export. Item Code creation/import in Aztek is n
 
 - Side-by-side dates, multiple Amt columns (Tier S/A/B), and simultaneous Paid/Free rates are blocked with a warning. Split these sources into one group before converting; do not claim automatic conversion of the whole matrix.
 - Invalid quantities or unspecified rates in a Chance column block export rather than silently yielding a partial bundle. Use Fixed for guaranteed rewards.
-- Shared History, file export on public Pages and Discord require the configured team API. Live Discord delivery is not verified without the team's webhook.
+- Shared History, Request-linked exports and Discord require the configured team API. Standalone exports run in the browser from the bundled templates without the API. Live Discord delivery is not verified without the team's webhook.
 - Automated tests do not prove Aztek acceptance. Use an already accepted import template and a controlled demo request.
 
 ## Demo path

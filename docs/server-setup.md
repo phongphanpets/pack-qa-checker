@@ -1,7 +1,9 @@
 # Request Hub server
 
 GitHub Pages hosts the interface at https://phongphanpets.github.io/pack-qa-checker/.
-The team has not provided a server yet. Run the API below on a server with persistent storage, then enter its HTTPS URL and access token in the Pages connection panel. Until connected, shared History, XLSX upload and export are unavailable.
+The team has not provided a server yet. Bundle-only paste/manual exports now run in the browser using the bundled XLSX templates, including separate ZIP workbooks and standalone Product export. These exports do not send request data to an API or save shared History. Loading the website and template assets still requires network access; full offline caching is not implemented.
+
+Run the API below on a server with persistent storage, then enter its HTTPS URL and access token in the Pages connection panel for shared Requests, History and XLSX upload. Exports associated with an existing Request continue through the API to preserve its artifact history.
 
 ## Deployment
 

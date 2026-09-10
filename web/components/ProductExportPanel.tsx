@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api-client";
+import { localProductExport } from "@/lib/local-template-export";
 
 import type { SpecBundle } from "@/lib/website-ocr";
 
@@ -37,18 +38,24 @@ export default function ProductExportPanel({ requestId, productName, bundles, se
     setExporting(true);
     setExportError("");
     try {
+      const draft = { name, category, displayOrder, saleStart, saleEnd, purchaseLimit, currency, actualPrice, fullPrice, bundleNames: selectedBundles.map((bundle) => bundle.name) };
+      let blob: Blob;
+      if (!requestId) blob = await localProductExport(draft);
+      else {
       const response = await apiFetch("/api/product-import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId, filename: `${safeFilename(name)}-product-import.xlsx`, name, category, displayOrder, saleStart, saleEnd, purchaseLimit, currency, actualPrice, fullPrice, bundleNames: selectedBundles.map((bundle) => bundle.name) }),
       });
       if (!response.ok) throw new Error("สร้างไฟล์จาก Product Import Template ไม่สำเร็จ");
-      const url = URL.createObjectURL(await response.blob());
+      blob = await response.blob();
+      }
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `${safeFilename(name)}-product-import.xlsx`;
       link.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "Export Product ไม่สำเร็จ");
     } finally {

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api-client";
+import { localBundleExport } from "@/lib/local-template-export";
 import { prepareBundleRows } from "@/lib/bundle-export-rows.mjs";
 import { expandBundleRewards } from "@/lib/bundle-rewards";
 
@@ -244,19 +245,24 @@ export default function ImportAdapterWorkspace() {
     try {
     const included = includedBundles;
     const filename = safeFilename(exportName || bundleName || included[0]?.name || "bundle-import") + (splitFiles ? ".zip" : ".xlsx");
+    let blob: Blob;
+    if (!requestId) {
+      blob = await localBundleExport(included, catalog, mirrorChance, splitFiles);
+    } else {
     const response = await apiFetch("/api/bundle-import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ bundles: included, catalog, requestId, filename, mirrorChance, splitFiles }),
     });
     if (!response.ok) { const error = await response.json(); throw new Error(error.error || "สร้างไฟล์จาก Bundle Import Template ไม่สำเร็จ"); }
-    const blob = await response.blob();
+    blob = await response.blob();
+    }
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = filename;
     link.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "Export ไม่สำเร็จ");
     } finally { setExporting(false); }
@@ -298,6 +304,7 @@ export default function ImportAdapterWorkspace() {
           {exportReview.errors.map((message, index) => <p className="hub-error" key={`error-${index}`}>{message}</p>)}
           {exportReview.warnings.map((message, index) => <p className="source-warning" key={`warning-${index}`}>{message}</p>)}
           <button type="button" className="primary-button" disabled={exporting || exportReview.errors.length > 0} onClick={() => void downloadImport()}>{exporting ? "กำลังสร้างไฟล์..." : `Export Import file (${selectedCount})`}</button>
+          {!requestId && <p className="hint">Export ในเครื่อง · ไม่บันทึก History ส่วนกลาง</p>}
           {exportError && <p className="hub-error" role="alert">{exportError}</p>}
           <p className="hint">สร้าง Excel ตาม Bundle Import format พร้อม Fixed, Random, Coin, GSP และ Player EXP</p>
         </>}
