@@ -1,3 +1,5 @@
+import { isGoogleScript, googleScriptFetch } from "./google-script-client";
+
 const endpointKey = "bundle-import-api-endpoint";
 const tokenKey = "bundle-import-api-token";
 
@@ -13,6 +15,7 @@ export function configureApi(endpoint: string, token: string) {
 }
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
+  if (isGoogleScript()) return googleScriptFetch(path, options);
   const { endpoint, token } = apiConfiguration();
   if (!endpoint && window.location.hostname.endsWith("github.io")) throw new Error("เชื่อมต่อเซิร์ฟเวอร์ด้านบนก่อนใช้งาน");
   const headers = new Headers(options.headers);

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api-client";
 import { localProductExport } from "@/lib/local-template-export";
+import { isGoogleScript, saveGoogleExport } from "@/lib/google-script-client";
 
 import type { SpecBundle } from "@/lib/website-ocr";
 
@@ -40,7 +41,10 @@ export default function ProductExportPanel({ requestId, productName, bundles, se
     try {
       const draft = { name, category, displayOrder, saleStart, saleEnd, purchaseLimit, currency, actualPrice, fullPrice, bundleNames: selectedBundles.map((bundle) => bundle.name) };
       let blob: Blob;
-      if (!requestId) blob = await localProductExport(draft);
+      if (!requestId || isGoogleScript()) {
+        blob = await localProductExport(draft);
+        if (requestId) await saveGoogleExport(requestId, `${safeFilename(name)}-product-import.xlsx`, "PRODUCT_IMPORT", blob);
+      }
       else {
       const response = await apiFetch("/api/product-import", {
         method: "POST",

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api-client";
 import { localBundleExport } from "@/lib/local-template-export";
+import { isGoogleScript, saveGoogleExport } from "@/lib/google-script-client";
 import { prepareBundleRows } from "@/lib/bundle-export-rows.mjs";
 import { expandBundleRewards } from "@/lib/bundle-rewards";
 
@@ -246,8 +247,9 @@ export default function ImportAdapterWorkspace() {
     const included = includedBundles;
     const filename = safeFilename(exportName || bundleName || included[0]?.name || "bundle-import") + (splitFiles ? ".zip" : ".xlsx");
     let blob: Blob;
-    if (!requestId) {
+    if (!requestId || isGoogleScript()) {
       blob = await localBundleExport(included, catalog, mirrorChance, splitFiles);
+      if (requestId) await saveGoogleExport(requestId, filename, "BUNDLE_IMPORT", blob);
     } else {
     const response = await apiFetch("/api/bundle-import", {
       method: "POST",

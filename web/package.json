@@ -6,6 +6,8 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "build:google": "vite build --config vite.google.config.ts && node scripts/package-google.mjs",
+    "test:google": "npm run build:google && node --test tests/google-backend.test.mjs tests/google-app-smoke.test.mjs",
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",

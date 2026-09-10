@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch, downloadApiFile } from "@/lib/api-client";
+import { isGoogleScript } from "@/lib/google-script-client";
 
 import ItemCodeRequestForm from "@/components/ItemCodeRequestForm";
 import { parseExcelPaste } from "@/lib/excel-paste";
@@ -91,7 +92,7 @@ export default function RequestHub({ onOpenAdapter, onStartBundleOnly }: { onOpe
       setRequests(body.requests);
       setError("");
     } catch (error) {
-      const remote = Boolean(localStorage.getItem("bundle-import-api-endpoint")) || window.location.hostname.endsWith("github.io");
+      const remote = isGoogleScript() || Boolean(localStorage.getItem("bundle-import-api-endpoint")) || window.location.hostname.endsWith("github.io");
       setRequests(remote ? [] : readLocalRequests());
       setError(remote ? error instanceof Error ? error.message : "โหลด History ไม่สำเร็จ" : "กำลังใช้ Request Hub ในเครื่องชั่วคราว — เปิด API เพื่อบันทึกส่วนกลางและแจ้ง Discord");
     } finally {
