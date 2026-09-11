@@ -82,11 +82,14 @@ export async function localBundleExport(bundles: SpecBundle[], catalog: CatalogI
   return new Blob([zipSync(files, { level: 0 })], { type: "application/zip" });
 }
 
-export async function localProductExport(draft: { name: string; category: string; displayOrder: string; saleStart: string; saleEnd: string; purchaseLimit: string; currency: string; actualPrice: string; fullPrice: string; bundleNames: string[] }) {
-  if (!draft.name.trim() || !draft.bundleNames.length) throw new Error("กรอกชื่อ Product และเลือก Bundle ก่อน Export");
+export type LocalProductDraft = { name: string; category: string; displayOrder: string; saleStart: string; saleEnd: string; purchaseLimit: string; currency: string; actualPrice: string; fullPrice: string; bundleNames: string[] };
+
+export async function localProductExport(input: LocalProductDraft | LocalProductDraft[]) {
+  const drafts = Array.isArray(input) ? input : [input];
+  if (!drafts.length || drafts.some((draft) => !draft.name.trim() || !draft.bundleNames.length)) throw new Error("กรอกชื่อ Product และเลือก Bundle ก่อน Export");
   const date = (value: string) => value.trim() ? value.trim().replace("T", " ").replace(/(?<=\d{2}:\d{2})$/, ":00") : "";
-  const values = ["GAME", draft.name, draft.name, draft.category, "", "", "", "", "", "", "", draft.displayOrder,
+  const rows = drafts.map((draft) => ["GAME", draft.name, draft.name, draft.category, "", "", "", "", "", "", "", draft.displayOrder,
     date(draft.saleStart), date(draft.saleEnd), draft.purchaseLimit, "", "", "", "", "", "",
-    "TRUE", "TRUE", "FALSE", draft.currency, draft.actualPrice, draft.fullPrice, "", "", "", "", "", "", draft.bundleNames.join(", ")];
-  return new Blob([await templateRows(productTemplateUrl, [values], false)], { type: mime });
+    "TRUE", "TRUE", "FALSE", draft.currency, draft.actualPrice, draft.fullPrice, "", "", "", "", "", "", draft.bundleNames.join(", ")]);
+  return new Blob([await templateRows(productTemplateUrl, rows, false)], { type: mime });
 }

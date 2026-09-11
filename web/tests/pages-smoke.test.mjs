@@ -87,9 +87,9 @@ test("Pages starts with local Bundle Import and exports without a server", async
     await page.getByRole("button", { name: "ตั้งค่า Product", exact: true }).click();
     assert.equal(await page.getByLabel("สกุลเงิน", { exact: true }).inputValue(), "Seed Point");
     const productDownload = page.waitForEvent("download");
-    await page.getByRole("button", { name: "Export Product Import", exact: true }).click();
+    await page.getByRole("button", { name: /Export Product Import \(1\)/ }).click();
     const product = unzipSync(await readFile(await (await productDownload).path()));
-    assert.match(strFromU8(product["xl/sharedStrings.xml"]), /bundle-import/);
+    assert.match(strFromU8(product["xl/sharedStrings.xml"]), /ทดสอบ Export local/);
     assert.match(strFromU8(product["xl/worksheets/sheet1.xml"]), /r="AH2"/);
     assert.equal(localApiCalls, 0, "Standalone exports must never call the API");
     await page.screenshot({ path: "../outputs/pages-review/desktop.png", fullPage: true });
