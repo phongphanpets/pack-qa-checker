@@ -25,8 +25,8 @@ function applyBundleNames(result: ExcelPasteResult, names: Record<number, string
   const base = batchName.trim();
   return {
     ...result,
-    bundles: result.bundles.map((bundle, index) => ({ ...bundle, name: names[index]?.trim() || (base ? `${base} #${index + 1}` : bundle.name) })),
-    summary: names[0]?.trim() || base ? { ...result.summary, name: names[0]?.trim() || `${base} #1` } : result.summary,
+    bundles: result.bundles.map((bundle, index) => ({ ...bundle, name: names[index]?.trim() || (base ? `${base} #${index + 1}` : bundle.name === "Untitled Bundle" ? `Bundle #${index + 1}` : bundle.name) })),
+    summary: names[0]?.trim() || base || result.summary.name === "Untitled Bundle" ? { ...result.summary, name: names[0]?.trim() || (base ? `${base} #1` : "Bundle #1") } : result.summary,
   };
 }
 
@@ -305,8 +305,9 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
         <div className="preview-heading"><div><p className="eyebrow">Step 2</p><h2>รายการก่อนล็อก</h2></div>{bundles.length > 1 && <button type="button" className="quiet-button" onClick={() => setLocked(new Set(bundles.map((_, index) => index)))}>ล็อกทั้งหมด</button>}</div>
         {!bundles.length ? <EmptyPreview mode={sourceMode} /> : <>
           <div className="preview-summary"><span>{selectedCount} รายการพร้อมส่งต่อ</span><span>{bundles.filter((bundle) => bundle.is_gacha).length} Random</span></div>
+          <p className="bundle-name-note">หากยังไม่ตั้งชื่อ ระบบจะใช้ <b>Bundle #1, Bundle #2</b> ตามลำดับ สามารถแก้ชื่อแต่ละรายการได้ก่อน Export</p>
           {bundles.length > 1 && <label className="bundle-batch-name"><span>ตั้งชื่อ Bundle ทั้งชุด</span><input aria-label="ตั้งชื่อ Bundle ทั้งชุด" value={bundleNameBase} onChange={(event) => setBundleNameBase(event.target.value)} placeholder="เช่น 9.9 เสว : God Coin" /><small>ระบบจะตั้งชื่อเป็น #1, #2, #3 ตามลำดับ และแก้รายชื่อแต่ละ Bundle ด้านล่างได้</small></label>}
-          <div className="bundle-preview-list">{bundles.map((bundle, index) => <BundlePreview bundle={bundle} index={index} locked={locked.has(index)} onToggle={() => toggleLock(index)} onNameChange={(name) => setBundleNameOverrides((current) => ({ ...current, [index]: name }))} key={index} />)}</div>
+          <div className="bundle-preview-list">{bundles.map((bundle, index) => <BundlePreview bundle={bundle} index={index} nameValue={bundleNameOverrides[index] ?? (bundleNameBase ? bundle.name : "")} locked={locked.has(index)} onToggle={() => toggleLock(index)} onNameChange={(name) => setBundleNameOverrides((current) => ({ ...current, [index]: name }))} key={index} />)}</div>
           <label><input type="checkbox" checked={mirrorChance} onChange={event => setMirrorChance(event.target.checked)} /> Chance / Secret Chance เท่ากัน</label>
           <label>รูปแบบไฟล์ <select aria-label="รูปแบบไฟล์ Export" value={splitFiles ? "zip" : "xlsx"} onChange={event => setSplitFiles(event.target.value === "zip")}><option value="zip">แยก Excel ต่อ Bundle รวมเป็น ZIP</option><option value="xlsx">รวมทุก Bundle ใน Excel เดียว</option></select></label>
           {exportReview.errors.map((message, index) => <p className="hub-error" key={`error-${index}`}>{message}</p>)}
@@ -366,11 +367,11 @@ function safeFilename(value: string) {
   return value.trim().replace(/[<>:"/\\|?*]/g, "-").replace(/\s+/g, " ").slice(0, 100) || "bundle-import";
 }
 
-function BundlePreview({ bundle, index, locked, onToggle, onNameChange }: { bundle: SpecBundle; index: number; locked: boolean; onToggle: () => void; onNameChange: (name: string) => void }) {
+function BundlePreview({ bundle, index, nameValue, locked, onToggle, onNameChange }: { bundle: SpecBundle; index: number; nameValue: string; locked: boolean; onToggle: () => void; onNameChange: (name: string) => void }) {
   const chanceTotal = bundle.is_gacha ? bundle.items.reduce((total, item) => total + (item.chance || 0), 0) : null;
   return <article className={"bundle-preview " + (locked ? "locked" : "")}>
     <div className="bundle-preview-top"><label><input type="checkbox" checked={locked} onChange={onToggle} /><span>{locked ? "ล็อกแล้ว" : "เลือกส่งออก"}</span></label><span className={bundle.is_gacha ? "random-tag" : "fixed-tag"}>{bundle.is_gacha ? "Random" : "Fixed"}</span></div>
-    <label className="bundle-name-editor"><span>ชื่อ Bundle {index + 1}</span><input aria-label={`ชื่อ Bundle ${index + 1}`} value={bundle.name === "Untitled Bundle" ? "" : bundle.name} onChange={(event) => onNameChange(event.target.value)} placeholder={`Bundle #${index + 1}`} /></label>
+    <label className="bundle-name-editor"><span>ชื่อ Bundle {index + 1}</span><input aria-label={`ชื่อ Bundle ${index + 1}`} value={nameValue} onChange={(event) => onNameChange(event.target.value)} placeholder={`Bundle #${index + 1}`} /></label>
     <div className="bundle-meta"><span>Seed {bundle.seed_point ?? "-"}</span><span>Limit {bundle.purchase_limit ?? "-"}</span><span>{bundle.items.length} items</span>{chanceTotal !== null && <span>Chance {chanceTotal}%</span>}</div>
     <ul>{bundle.items.slice(0, 4).map((item, itemIndex) => <li key={item.item_id + "-" + itemIndex}><code>{item.item_id}</code><span>{item.name}</span><b>×{item.amount}</b></li>)}{bundle.items.length > 4 && <li className="more-items">และอีก {bundle.items.length - 4} รายการ</li>}</ul>
   </article>;

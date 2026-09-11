@@ -119,7 +119,7 @@ function parseBareItemSection(rows: Cell[][], originalInput: string) {
   const bundleId = deterministicBundleId(originalInput + "\n" + name + "\nbare-item-list");
   const warnings: ExcelPasteWarning[] = [{
     code: "GENERATED_BUNDLE_ID",
-    message: "ไม่พบหัวตารางหรือชื่อ Bundle ระบบอ่านรายการ Item ID / Name / Amt ได้แล้ว แต่ควรตั้งชื่อ Bundle ก่อน Export",
+    message: "ไม่พบหัวตารางหรือชื่อ Bundle ระบบจะตั้งชื่อ Bundle #1 ให้ก่อน Export และแก้ชื่อได้ในรายการก่อนล็อก",
   }, ...itemWarnings];
   const documentItems = items.map((item) => ({
     item_id: field(item.itemId, clean(item.itemId.value)),
@@ -216,7 +216,7 @@ function parseStackedPriceBundles(rows: Cell[][], originalInput: string) {
         items: items.map((item) => ({ item_id: clean(item.itemId.value), name: clean(item.name.value), amount: item.amountValue, chance: null })),
       },
       valid: items.length > 0,
-      warnings: bundleIndex === 0 ? [{ code: "GENERATED_BUNDLE_ID" as const, message: `พบ ${starts.length} Bundle แบบไม่มีหัวตาราง ระบบแยกตามแถวราคาแล้ว กรุณาตั้งชื่อแต่ละ Bundle ก่อน Export` }] : [],
+      warnings: bundleIndex === 0 ? [{ code: "GENERATED_BUNDLE_ID" as const, message: `พบ ${starts.length} Bundle แบบไม่มีหัวตาราง ระบบแยกตามแถวราคาและตั้งชื่อ Bundle #1…#${starts.length} ให้แล้ว` }] : [],
       summary: {
         bundleId,
         generatedBundleId: true,
@@ -288,7 +288,7 @@ function parseStepUpBundleSections(rows: Cell[][], originalInput: string, header
         items: items.map((item) => ({ item_id: clean(item.itemId.value), name: clean(item.name.value), amount: item.amountValue, chance: null })),
       },
       valid: items.length > 0,
-      warnings: bundleIndex === 0 ? [{ code: "GENERATED_BUNDLE_ID" as const, message: `พบ ${starts.length} Step Up Bundles ระบบแยกตาม GSP Earn และ EXP Rank Earn แล้ว กรุณาตั้งชื่อก่อน Export` }] : [],
+      warnings: bundleIndex === 0 ? [{ code: "GENERATED_BUNDLE_ID" as const, message: `พบ ${starts.length} Step Up Bundles ระบบแยกตาม GSP Earn และ EXP Rank Earn พร้อมตั้งชื่อ Bundle #1…#${starts.length} ให้แล้ว` }] : [],
       summary: {
         bundleId,
         generatedBundleId: true,

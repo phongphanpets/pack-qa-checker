@@ -85,6 +85,7 @@ test("Pages starts with local Bundle Import and exports without a server", async
     const combined = unzipSync(await readFile(await (await combinedDownload).path()));
     assert.deepEqual(combined["xl/worksheets/sheet1.xml"], workbook["xl/worksheets/sheet1.xml"]);
     await page.getByRole("button", { name: "ตั้งค่า Product", exact: true }).click();
+    assert.equal(await page.getByLabel("สกุลเงิน", { exact: true }).inputValue(), "Seed Point");
     const productDownload = page.waitForEvent("download");
     await page.getByRole("button", { name: "Export Product Import", exact: true }).click();
     const product = unzipSync(await readFile(await (await productDownload).path()));
