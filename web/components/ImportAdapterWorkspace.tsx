@@ -74,8 +74,12 @@ function ItemCodeContext({ details }: { details: Record<string, unknown> }) {
   </section>;
 }
 
-export default function ImportAdapterWorkspace() {
-  const [screen, setScreen] = useState<"hub" | "adapter">("hub");
+type ImportAdapterWorkspaceProps = {
+  initialScreen?: "hub" | "adapter";
+};
+
+export default function ImportAdapterWorkspace({ initialScreen = "hub" }: ImportAdapterWorkspaceProps) {
+  const [screen, setScreen] = useState<"hub" | "adapter">(initialScreen);
   const [sourceMode, setSourceMode] = useState<SourceMode>("paste");
   const [pasteValue, setPasteValue] = useState("");
   const [exportName, setExportName] = useState("bundle-import");
@@ -278,16 +282,16 @@ export default function ImportAdapterWorkspace() {
       <div className="adapter-header-actions"><span className="adapter-status">Draft</span><button type="button" className="quiet-button" onClick={() => setScreen("hub")}>Request Hub</button></div>
     </header>
     <section className="adapter-intro">
-      <div><p className="eyebrow">Create import batch</p><h1>แปลง Request ให้เป็น Bundle พร้อม Import</h1><p>เริ่มจากเลือกวิธีส่งข้อมูล ระบบจะแยก Bundle ตรวจ Item และจัดชุดงานให้ก่อนส่งออก</p></div>
+      <div><p className="eyebrow">Create import batch</p><h1>แปลงตารางเป็น Bundle พร้อม Import</h1><p>วางตาราง กรอกข้อมูล หรือเลือก Spreadsheet แล้วตรวจรายการและ Export ได้ทันทีในเบราว์เซอร์นี้</p></div>
       <div className="adapter-stats"><span><b>{bundles.length}</b> Bundles</span><span><b>{bundles.reduce((total, bundle) => total + bundle.items.length, 0)}</b> Items</span></div>
     </section>
     {requestType === "ITEM_CODE" && itemCodeDetails && <ItemCodeContext details={itemCodeDetails} />}
     <section className="source-panel">
       <div className="section-heading"><div><p className="eyebrow">Step 1</p><h2>เลือกแหล่งข้อมูล</h2></div><p>เลือกเพียงหนึ่งแบบก่อน ระบบจะเปิดช่องที่เกี่ยวข้องให้</p></div>
       <div className="source-options">
-        <SourceOption active={sourceMode === "paste"} title="วางตารางจาก Request" detail="รองรับข้อมูลที่ก๊อบจาก Excel หรือ Google Sheet" onClick={() => setSourceMode("paste")} />
+        <SourceOption active={sourceMode === "paste"} title="วางตาราง" detail="รองรับข้อมูลที่ก๊อบจาก Excel หรือ Google Sheet" onClick={() => setSourceMode("paste")} />
         <SourceOption active={sourceMode === "manual"} title="กรอกข้อมูลเอง" detail="เหมาะกับ Bundle ใหม่หรือรายการสั้น" onClick={() => setSourceMode("manual")} />
-        <SourceOption active={sourceMode === "sheet"} title="แนบ Spreadsheet" detail="เลือกไฟล์และแท็บที่จะใช้ก่อน Preview" onClick={() => setSourceMode("sheet")} />
+        <SourceOption active={sourceMode === "sheet"} title="เลือก Spreadsheet" detail="เลือกไฟล์และแท็บที่จะใช้ก่อน Preview" onClick={() => setSourceMode("sheet")} />
       </div>
     </section>
     <section className="adapter-layout">
@@ -306,7 +310,7 @@ export default function ImportAdapterWorkspace() {
           {exportReview.errors.map((message, index) => <p className="hub-error" key={`error-${index}`}>{message}</p>)}
           {exportReview.warnings.map((message, index) => <p className="source-warning" key={`warning-${index}`}>{message}</p>)}
           <button type="button" className="primary-button" disabled={exporting || exportReview.errors.length > 0} onClick={() => void downloadImport()}>{exporting ? "กำลังสร้างไฟล์..." : `Export Import file (${selectedCount})`}</button>
-          {!requestId && <p className="hint">Export ในเครื่อง · ไม่บันทึก History ส่วนกลาง</p>}
+          {!requestId && <p className="hint">Export ในเบราว์เซอร์นี้ · ไม่ต้องเชื่อม Server หรือบันทึก History</p>}
           {exportError && <p className="hub-error" role="alert">{exportError}</p>}
           <p className="hint">สร้าง Excel ตาม Bundle Import format พร้อม Fixed, Random, Coin, GSP และ Player EXP</p>
         </>}

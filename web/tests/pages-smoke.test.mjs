@@ -7,7 +7,7 @@ import { once } from "node:events";
 import { chromium } from "playwright";
 import { unzipSync, strFromU8 } from "fflate";
 
-test("Pages renders connection and parses a pasted bundle without a server", async () => {
+test("Pages starts with local Bundle Import and exports without a server", async () => {
   const root = resolve("dist-pages");
   const server = createServer(async (req, res) => {
     const path = resolve(root, "." + new URL(req.url, "http://localhost").pathname.replace(/^\/pack-qa-checker/, "").replace(/\/$/, "/index.html"));
@@ -26,8 +26,8 @@ test("Pages renders connection and parses a pasted bundle without a server", asy
     const errors = [];
     page.on("pageerror", e => errors.push(e.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/pack-qa-checker/`);
-    await page.getByText("วันนี้ต้องสร้างอะไร?", { exact: true }).waitFor();
-    await page.getByRole("button", { name: /Bundle only/ }).click();
+    await page.getByText("แปลงตารางเป็น Bundle พร้อม Import", { exact: true }).waitFor();
+    assert.equal(await page.getByText("เซิร์ฟเวอร์ Request และ History", { exact: true }).count(), 0);
     const textarea = page.locator("textarea").first();
     await textarea.fill("1315002\tGod Fellow Ticket\t30");
     await page.getByText("God Fellow Ticket", { exact: true }).first().waitFor();
@@ -94,6 +94,7 @@ test("Pages renders connection and parses a pasted bundle without a server", asy
       return route.fulfill({ contentType: "application/octet-stream", body: "test-download" });
     });
     await page.reload();
+    await page.getByRole("button", { name: "Request Hub", exact: true }).click();
     await page.getByLabel("ค้นหางาน", { exact: true }).fill("SHOP2");
     assert.equal(await page.locator(".request-row").count(), 1);
     await page.locator(".request-row summary").click();
@@ -128,6 +129,7 @@ test("Pages renders connection and parses a pasted bundle without a server", asy
     await page.waitForFunction(() => !Array.from(document.querySelectorAll("button")).some(b => b.textContent.includes("กำลังสร้างไฟล์")));
     assert.equal(exportedId, "SHOP2");
     await page.reload();
+    await page.getByRole("button", { name: "Request Hub", exact: true }).click();
     await page.getByRole("button", { name: /^Web Shop/ }).click();
     await page.getByLabel("ชื่องาน / ชื่อ Product").fill("Validation request");
     const sourceTable = "Product Name\tAuto detect\tLimit\t10\nTHB\tSeed Point\tGSP Earn\tEXP Rank Earn\tItem ID\tItem Name\tAmt\n59\t590\t590\t59\t51201\tLanistar Key\t5";
@@ -171,6 +173,7 @@ test("Pages renders connection and parses a pasted bundle without a server", asy
     assert.equal(createdPayload.payload.auto_rewards.player_exp, 59.05);
     assert.equal(createdPayload.fixed_rewards, false);
     await page.reload();
+    await page.getByRole("button", { name: "Request Hub", exact: true }).click();
     await page.getByRole("button", { name: /^Item Code/ }).click();
     await page.getByLabel("ชื่องาน / ชื่อ Bundle").fill("Item code validation");
     await page.getByLabel("ใช้ได้ต่อ User", { exact: true }).fill("-1");
