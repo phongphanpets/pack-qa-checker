@@ -80,7 +80,11 @@ export function parseExcelPaste(input: string): ExcelPasteResult {
     const end = sectionEnd(rows, headerRow, nextHeader);
     return parseBundleSection(rows.slice(start, end), input, headerRow - start);
   });
-  if (!sections.length) sections.push(parseBareItemSection(rows, input));
+  if (!sections.length) {
+    const stackedBundles = parseStackedPriceBundles(rows, input);
+    if (stackedBundles.length) sections.push(...stackedBundles);
+    else sections.push(parseBareItemSection(rows, input));
+  }
   const primary = sections[0] || emptySection();
 
   return {
@@ -160,6 +164,74 @@ function parseBareItemSection(rows: Cell[][], originalInput: string) {
       chanceTotal: null,
     },
   };
+}
+
+// Some request sheets repeat a price row followed by reward rows, but omit the
+// usual Item ID / Item Name / Amt header for every bundle. Treat each price row
+// as a new bundle and ignore formula placeholders such as "not found".
+function parseStackedPriceBundles(rows: Cell[][], originalInput: string) {
+  const starts = rows
+    .map((row, index) => ({ row, index, item: findShiftedItem(row) }))
+    .filter(({ row, item }) => {
+      const paid = decimal(row[0]?.value);
+      const seedPoint = decimal(row[1]?.value);
+      return paid !== null && seedPoint !== null && paid > seedPoint && Boolean(item);
+    });
+  if (!starts.length) return [];
+
+  return starts.map(({ index, row }, bundleIndex) => {
+    const end = starts[bundleIndex + 1]?.index ?? rows.length;
+    const items = rows.slice(index, end)
+      .map((itemRow) => findShiftedItem(itemRow))
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .map(({ itemId, name, amount }) => ({ itemId, name, amount, amountValue: integer(amount.value)! }));
+    const name = "Untitled Bundle";
+    const bundleId = deterministicBundleId(`${originalInput}\nstacked-price-bundle\n${bundleIndex}`);
+    const seedPoint = decimal(row[1]?.value);
+    const documentItems = items.map((item) => ({
+      item_id: field(item.itemId, clean(item.itemId.value)),
+      name: field(item.name, clean(item.name.value)),
+      amount: field(item.amount, item.amountValue),
+    }));
+    return {
+      documentBundle: {
+        bundle_id: bundleId,
+        spec: {
+          bundle_id: { value: bundleId, source: "spec", confidence: 1, raw_text: "generated from stacked price rows", locator: `excel-paste:R${row[0].row}C${row[0].column}` },
+          name: { value: name, source: "spec", confidence: 1, raw_text: name, locator: "excel-paste:generated-bundle-name" },
+          seed_point: field(row[1], seedPoint),
+          is_gacha: false,
+          items: documentItems,
+        },
+      },
+      bundle: {
+        bundle_id: bundleId,
+        name,
+        seed_point: seedPoint,
+        gsp_earn: null,
+        purchase_limit: null,
+        is_gacha: false,
+        is_permanent: false,
+        items: items.map((item) => ({ item_id: clean(item.itemId.value), name: clean(item.name.value), amount: item.amountValue, chance: null })),
+      },
+      valid: items.length > 0,
+      warnings: bundleIndex === 0 ? [{ code: "GENERATED_BUNDLE_ID" as const, message: `พบ ${starts.length} Bundle แบบไม่มีหัวตาราง ระบบแยกตามแถวราคาแล้ว กรุณาตั้งชื่อแต่ละ Bundle ก่อน Export` }] : [],
+      summary: {
+        bundleId,
+        generatedBundleId: true,
+        name,
+        itemCount: items.length,
+        seedPoint,
+        gspEarn: null,
+        purchaseLimit: null,
+        isGacha: false,
+        isPermanent: false,
+        fixedItemCount: items.length,
+        randomOutcomeCount: 0,
+        chanceTotal: null,
+      },
+    };
+  });
 }
 
 function parseBundleSection(

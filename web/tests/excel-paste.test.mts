@@ -221,6 +221,22 @@ test("parses a headerless Item ID, Item Name and Amt list", () => {
   assert.equal(result.bundles[0].items[2].amount, 1500);
 });
 
+test("splits stacked price rows into bundles and ignores not found placeholders", () => {
+  const result = parseExcelPaste(
+    "2990\t299\t\tPopo_God_1\tGod Coin 1\t5\n" +
+      "\t40162\tGod Particles : Dawn Raven Rexipher\t30\n" +
+      "\t\tnot found\t\tnot found\t0\n" +
+      "3190\t319\t\tPopo_God_1\tGod Coin 1\t5\n" +
+      "\t40162\tGod Particles : Dawn Raven Rexipher\t30",
+  );
+
+  assert.equal(result.valid, true);
+  assert.equal(result.bundles.length, 2);
+  assert.deepEqual(result.bundles.map((bundle) => bundle.seed_point), [299, 319]);
+  assert.deepEqual(result.bundles.map((bundle) => bundle.items.length), [2, 2]);
+  assert.ok(result.bundles.flatMap((bundle) => bundle.items).every((item) => item.item_id !== "not found"));
+});
+
 test("reads GSP Earn and EXP Rank Earn from the bundle summary row", () => {
   const result = parseExcelPaste(
     "Product Name\tSample Bundle\n" +
