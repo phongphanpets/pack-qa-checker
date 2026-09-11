@@ -1,4 +1,4 @@
-/* Deploy as USER_ACCESSING. This app intentionally has no anonymous HTTP API. */
+/* Deploy as USER_ACCESSING. Set ALLOWED_EMAILS or REVIEWER_EMAILS to * for link-based team access. */
 const HUB_HEADERS = ['id', 'title', 'status', 'requester', 'created_at', 'updated_at', 'record_json'];
 const HUB_STATUSES = ['NEW', 'PROCESSING', 'REVIEW', 'READY_TO_IMPORT', 'IMPORTED', 'FAILED'];
 
@@ -43,6 +43,7 @@ function authorize_(reviewer) {
   const props = PropertiesService.getScriptProperties();
   const email = Session.getActiveUser().getEmail().toLowerCase();
   const allowed = String(props.getProperty(reviewer ? 'REVIEWER_EMAILS' : 'ALLOWED_EMAILS') || '').split(',').map(s => s.trim().toLowerCase());
+  if (allowed.includes('*')) return email || 'PUBLIC';
   if (!email || !allowed.includes(email)) fail_(403, reviewer ? 'บัญชีนี้ยังไม่มีสิทธิ์ตรวจงานหรือ Export' : 'บัญชีนี้ยังไม่ได้รับสิทธิ์ Request Hub');
   return email;
 }
