@@ -45,6 +45,17 @@ test("parses a copied Excel pack table without OCR", () => {
   assert.equal(bundle.spec.items[0].item_id.confidence, 1);
 });
 
+test("parses a plain Item ID, Item Name and Amt table on the first paste", () => {
+  const result = parseExcelPaste(`Item ID\tItem Name\tAmt
+4235100\tBelorb Stabilizer\t10
+51201\tLanistar Key\t5
+Popo_God_1\tGod Coin 1\t3`);
+
+  assert.equal(result.valid, true);
+  assert.equal(result.bundles.length, 1);
+  assert.equal(result.summary.itemCount, 3);
+});
+
 test("keeps missing year and generated identity visible as warnings", () => {
   const result = parseExcelPaste(copiedExcelBlock);
 

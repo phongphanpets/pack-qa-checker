@@ -184,7 +184,9 @@ function parseBundleSection(
   const isGacha = randomItems.length > 0;
   const chanceTotal = isGacha ? randomItems.reduce((total, item) => total + (item.chanceValue || 0), 0) : null;
   const explicitBundleId = integer(explicitBundleCell?.value);
-  const name = clean(nameCell?.value);
+  // A three-column reward table is valid input even when its title is supplied
+  // separately by the Request Hub. Keep it parseable so the UI can ask for a name.
+  const name = clean(nameCell?.value) || (items.length ? "Untitled Bundle" : null);
   const generatedBundleId = explicitBundleId === null && Boolean(name && items.length);
   const bundleId = generatedBundleId ? deterministicBundleId(`${originalInput}\n${name}\n${itemHeaderRow}`) : explicitBundleId;
   if (generatedBundleId) warnings.push({ code: "GENERATED_BUNDLE_ID", message: `ไม่พบ bundle_id ของ ${name} ระบบสร้าง ID ชั่วคราวสำหรับการตรวจรอบนี้` });
