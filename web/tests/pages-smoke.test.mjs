@@ -40,6 +40,10 @@ test("Pages starts with local Bundle Import and exports without a server", async
     await page.getByText("ข้อมูลเปลี่ยนหลังล็อก กรุณาเลือก Bundle ที่ต้องการส่งออกใหม่", { exact: true }).waitFor();
     assert.equal(await page.getByRole("button", { name: /Export Import file/ }).isDisabled(), true);
     await textarea.fill("Bundle Name\tA\nItem ID\tItem Name\tAmt\n51201\tLanistar Key\t1\n\nBundle Name\tB\nItem ID\tItem Name\tAmt\n52001\tMemory Key\t2");
+    await page.getByLabel("ชื่อ Bundle 1").fill("Bundle ที่หนึ่ง");
+    await page.getByLabel("ชื่อ Bundle 2").fill("Bundle ที่สอง");
+    assert.equal(await page.getByLabel("ชื่อ Bundle 1").inputValue(), "Bundle ที่หนึ่ง");
+    assert.equal(await page.getByLabel("ชื่อ Bundle 2").inputValue(), "Bundle ที่สอง");
     await selection.check();
     assert.equal(await page.getByRole("button", { name: "Export Import file (1)", exact: true }).isEnabled(), true);
     await selection.uncheck();
@@ -53,7 +57,7 @@ test("Pages starts with local Bundle Import and exports without a server", async
     assert.equal(await page.getByRole("button", { name: /Export Import file/ }).count(), 0);
     await textarea.fill("1315002\tGod Fellow Ticket\t31");
     await mkdir("../outputs/pages-review", { recursive: true });
-    await page.getByLabel("ชื่อ Bundle จากรายการ").fill("ทดสอบ Export local");
+    await page.getByLabel("ชื่อ Bundle 1").fill("ทดสอบ Export local");
     await selection.check();
     let localApiCalls = 0;
     await page.route("**/api/bundle-import", route => { localApiCalls++; return route.abort(); });
@@ -75,15 +79,7 @@ test("Pages starts with local Bundle Import and exports without a server", async
     await page.getByRole("button", { name: /Export Import file/ }).click();
     const combined = unzipSync(await readFile(await (await combinedDownload).path()));
     assert.deepEqual(combined["xl/worksheets/sheet1.xml"], workbook["xl/worksheets/sheet1.xml"]);
-    const productDownload = page.waitForEvent("download");
-    await page.getByRole("button", { name: "Export Product Import", exact: true }).click();
-    const product = unzipSync(await readFile(await (await productDownload).path()));
-    assert.match(strFromU8(product["xl/sharedStrings.xml"]), /ทดสอบ Export local/);
-    const productSheet = strFromU8(product["xl/worksheets/sheet1.xml"]);
-    assert.match(productSheet, /r="V2"/);
-    assert.match(productSheet, /r="Y2"/);
-    assert.match(productSheet, /r="AH2"/);
-    assert.doesNotMatch(productSheet, /r="AI2"/);
+    assert.equal(await page.getByRole("button", { name: "Export Product Import", exact: true }).count(), 0);
     assert.equal(localApiCalls, 0, "Standalone exports must never call the API");
     await page.screenshot({ path: "../outputs/pages-review/desktop.png", fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });

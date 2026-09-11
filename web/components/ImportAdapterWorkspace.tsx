@@ -21,13 +21,11 @@ type AutoRewards = { title: string; seedPoint: number; playerExp: number; purcha
 
 const emptyItem = (key: number): ManualItem => ({ key, itemId: "", name: "", amount: "1", tier: "Trainee", chance: "" });
 
-function applyBareBundleName(result: ExcelPasteResult, value: string): ExcelPasteResult {
-  const name = value.trim();
-  if (!name || !result.bundles.some((bundle) => bundle.name === "Untitled Bundle")) return result;
+function applyBundleNames(result: ExcelPasteResult, names: Record<number, string>): ExcelPasteResult {
   return {
     ...result,
-    bundles: result.bundles.map((bundle) => bundle.name === "Untitled Bundle" ? { ...bundle, name } : bundle),
-    summary: result.summary.name === "Untitled Bundle" ? { ...result.summary, name } : result.summary,
+    bundles: result.bundles.map((bundle, index) => ({ ...bundle, name: names[index]?.trim() || bundle.name })),
+    summary: names[0]?.trim() ? { ...result.summary, name: names[0].trim() } : result.summary,
   };
 }
 
@@ -76,14 +74,15 @@ function ItemCodeContext({ details }: { details: Record<string, unknown> }) {
 
 type ImportAdapterWorkspaceProps = {
   initialScreen?: "hub" | "adapter";
+  showProductExport?: boolean;
 };
 
-export default function ImportAdapterWorkspace({ initialScreen = "hub" }: ImportAdapterWorkspaceProps) {
+export default function ImportAdapterWorkspace({ initialScreen = "hub", showProductExport = true }: ImportAdapterWorkspaceProps) {
   const [screen, setScreen] = useState<"hub" | "adapter">(initialScreen);
   const [sourceMode, setSourceMode] = useState<SourceMode>("paste");
   const [pasteValue, setPasteValue] = useState("");
   const [exportName, setExportName] = useState("bundle-import");
-  const [bareBundleName, setBareBundleName] = useState("");
+  const [bundleNameOverrides, setBundleNameOverrides] = useState<Record<number, string>>({});
   const [bundleName, setBundleName] = useState("");
   const [price, setPrice] = useState("");
   const [limit, setLimit] = useState("");
@@ -106,10 +105,10 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub" }: Import
   const [splitFiles, setSplitFiles] = useState(true);
 
   const rawParsedPaste = useMemo<ExcelPasteResult>(() => parseExcelPaste(pasteValue), [pasteValue]);
-  const parsedPaste = useMemo<ExcelPasteResult>(() => applyBareBundleName(rawParsedPaste, bareBundleName), [rawParsedPaste, bareBundleName]);
+  const parsedPaste = useMemo<ExcelPasteResult>(() => applyBundleNames(rawParsedPaste, bundleNameOverrides), [rawParsedPaste, bundleNameOverrides]);
   const selectedSheetText = sheetTabs.find((tab) => tab.name === selectedSheetTab)?.text || "";
   const rawParsedSheet = useMemo<ExcelPasteResult>(() => parseExcelPaste(selectedSheetText), [selectedSheetText]);
-  const parsedSheet = useMemo<ExcelPasteResult>(() => applyBareBundleName(rawParsedSheet, bareBundleName), [rawParsedSheet, bareBundleName]);
+  const parsedSheet = useMemo<ExcelPasteResult>(() => applyBundleNames(rawParsedSheet, bundleNameOverrides), [rawParsedSheet, bundleNameOverrides]);
   const manual = useMemo(() => manualBundles(bundleName, price, limit, items), [bundleName, price, limit, items]);
   const sourceResult = sourceMode === "paste" ? parsedPaste : sourceMode === "manual" ? null : parsedSheet;
   const parsedBundles = sourceMode === "paste" ? parsedPaste.bundles : sourceMode === "manual" ? manual : parsedSheet.bundles;
@@ -141,7 +140,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub" }: Import
     setSourceMode("paste");
     setPasteValue(source);
     setBundleName("");
-    setBareBundleName("");
+    setBundleNameOverrides({});
     setExportName("bundle-import");
     setPrice("");
     setLimit("");
@@ -175,7 +174,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub" }: Import
       }
       if (request?.title) {
         setExportName(request.title);
-        setBareBundleName(request.title);
+        setBundleNameOverrides({ 0: request.title });
       }
     } catch {
       setAutoRewards(null);
@@ -213,7 +212,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub" }: Import
     setSourceMode("paste");
     setPasteValue("");
     setExportName("bundle-import");
-    setBareBundleName("");
+    setBundleNameOverrides({});
     setBundleName("");
     setPrice("");
     setLimit("");
@@ -282,7 +281,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub" }: Import
       <div className="adapter-header-actions"><span className="adapter-status">Draft</span><button type="button" className="quiet-button" onClick={() => setScreen("hub")}>Request Hub</button></div>
     </header>
     <section className="adapter-intro">
-      <div><p className="eyebrow">Create import batch</p><h1>แปลงตารางเป็น Bundle พร้อม Import</h1><p>วางตาราง กรอกข้อมูล หรือเลือก Spreadsheet แล้วตรวจรายการและ Export ได้ทันทีในเบราว์เซอร์นี้</p></div>
+      <div><p className="eyebrow">Create import batch</p><h1>แปลงตารางเป็น Bundle พร้อม Import</h1><p>วางตาราง ตั้งชื่อแต่ละ Bundle ตรวจรายการ และ Export ได้ทันทีในเบราว์เซอร์นี้</p></div>
       <div className="adapter-stats"><span><b>{bundles.length}</b> Bundles</span><span><b>{bundles.reduce((total, bundle) => total + bundle.items.length, 0)}</b> Items</span></div>
     </section>
     {requestType === "ITEM_CODE" && itemCodeDetails && <ItemCodeContext details={itemCodeDetails} />}
@@ -290,21 +289,19 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub" }: Import
       <div className="section-heading"><div><p className="eyebrow">Step 1</p><h2>เลือกแหล่งข้อมูล</h2></div><p>เลือกเพียงหนึ่งแบบก่อน ระบบจะเปิดช่องที่เกี่ยวข้องให้</p></div>
       <div className="source-options">
         <SourceOption active={sourceMode === "paste"} title="วางตาราง" detail="รองรับข้อมูลที่ก๊อบจาก Excel หรือ Google Sheet" onClick={() => setSourceMode("paste")} />
-        <SourceOption active={sourceMode === "manual"} title="กรอกข้อมูลเอง" detail="เหมาะกับ Bundle ใหม่หรือรายการสั้น" onClick={() => setSourceMode("manual")} />
-        <SourceOption active={sourceMode === "sheet"} title="เลือก Spreadsheet" detail="เลือกไฟล์และแท็บที่จะใช้ก่อน Preview" onClick={() => setSourceMode("sheet")} />
+        <SourceOption active={false} title="กรอกข้อมูลเอง" detail="กำลังปรับรูปแบบข้อมูลให้ใช้งานได้ครบ" onClick={() => undefined} wip />
+        <SourceOption active={false} title="เลือก Spreadsheet" detail="กำลังปรับการอ่านหลายแท็บให้ใช้งานได้ครบ" onClick={() => undefined} wip />
       </div>
     </section>
     <section className="adapter-layout">
       <div className="adapter-input">
-        {sourceMode === "paste" && <PasteInput value={pasteValue} onChange={setPasteValue} parsed={parsedPaste} rawParsed={rawParsedPaste} bareBundleName={bareBundleName} onBareBundleName={(value) => { setBareBundleName(value); if (value.trim()) setExportName(value); }} />}
-        {sourceMode === "manual" && <ManualInput bundleName={bundleName} price={price} limit={limit} items={items} onBundleName={setBundleName} onPrice={setPrice} onLimit={setLimit} onPatchItem={patchItem} onAddItem={() => { setItems((current) => [...current, emptyItem(nextItemKey)]); setNextItemKey((current) => current + 1); }} onDeleteItem={(key) => setItems((current) => current.length === 1 ? current : current.filter((item) => item.key !== key))} />}
-        {sourceMode === "sheet" && <SpreadsheetInput fileName={sheetFileName} tabs={sheetTabs} selectedTab={selectedSheetTab} loading={loadingSheet} error={sheetError} parsed={parsedSheet} rawParsed={rawParsedSheet} bareBundleName={bareBundleName} onBareBundleName={(value) => { setBareBundleName(value); if (value.trim()) setExportName(value); }} onChoose={chooseSpreadsheet} onTabChange={(tab) => { setSelectedSheetTab(tab); setLocked(new Set()); }} />}
+        {sourceMode === "paste" && <PasteInput value={pasteValue} onChange={(value) => { setPasteValue(value); setBundleNameOverrides({}); }} parsed={parsedPaste} />}
       </div>
       <aside className="adapter-preview">
         <div className="preview-heading"><div><p className="eyebrow">Step 2</p><h2>รายการก่อนล็อก</h2></div>{bundles.length > 1 && <button type="button" className="quiet-button" onClick={() => setLocked(new Set(bundles.map((_, index) => index)))}>ล็อกทั้งหมด</button>}</div>
         {!bundles.length ? <EmptyPreview mode={sourceMode} /> : <>
           <div className="preview-summary"><span>{selectedCount} รายการพร้อมส่งต่อ</span><span>{bundles.filter((bundle) => bundle.is_gacha).length} Random</span></div>
-          <div className="bundle-preview-list">{bundles.map((bundle, index) => <BundlePreview bundle={bundle} index={index} locked={locked.has(index)} onToggle={() => toggleLock(index)} key={bundle.name + "-" + index} />)}</div>
+          <div className="bundle-preview-list">{bundles.map((bundle, index) => <BundlePreview bundle={bundle} index={index} locked={locked.has(index)} onToggle={() => toggleLock(index)} onNameChange={(name) => setBundleNameOverrides((current) => ({ ...current, [index]: name }))} key={bundle.name + "-" + index} />)}</div>
           <label><input type="checkbox" checked={mirrorChance} onChange={event => setMirrorChance(event.target.checked)} /> Chance / Secret Chance เท่ากัน</label>
           <label>รูปแบบไฟล์ <select aria-label="รูปแบบไฟล์ Export" value={splitFiles ? "zip" : "xlsx"} onChange={event => setSplitFiles(event.target.value === "zip")}><option value="zip">แยก Excel ต่อ Bundle รวมเป็น ZIP</option><option value="xlsx">รวมทุก Bundle ใน Excel เดียว</option></select></label>
           {exportReview.errors.map((message, index) => <p className="hub-error" key={`error-${index}`}>{message}</p>)}
@@ -316,17 +313,17 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub" }: Import
         </>}
       </aside>
     </section>
-    {selectedCount > 0 && requestType !== "ITEM_CODE" && <ProductExportPanel requestId={requestId} productName={exportName || bundleName} bundles={bundles} selectedIndexes={locked} fallbackPrice={price || String(bundles[0]?.seed_point ?? "")} fallbackLimit={limit || String(bundles[0]?.purchase_limit ?? "")} />}
+    {showProductExport && selectedCount > 0 && requestType !== "ITEM_CODE" && <ProductExportPanel requestId={requestId} productName={exportName || bundleName} bundles={bundles} selectedIndexes={locked} fallbackPrice={price || String(bundles[0]?.seed_point ?? "")} fallbackLimit={limit || String(bundles[0]?.purchase_limit ?? "")} />}
     {bundles.length > 0 && <section className="adapter-validation"><div className="section-heading"><div><p className="eyebrow">Step 3</p><h2>ตรวจ Item ก่อน Export</h2></div><p>เทียบกับ Data กลางเพื่อลด Item ID หรือชื่อที่ไม่ตรง</p></div><ItemCatalogCheck bundles={bundles} onCatalogChange={setCatalog} /></section>}
   </main>;
 }
 
-function SourceOption({ active, title, detail, onClick }: { active: boolean; title: string; detail: string; onClick: () => void }) {
-  return <button type="button" className={"source-option " + (active ? "selected" : "")} onClick={onClick}><span className="source-radio" aria-hidden="true" /><strong>{title}</strong><small>{detail}</small></button>;
+function SourceOption({ active, title, detail, onClick, wip = false }: { active: boolean; title: string; detail: string; onClick: () => void; wip?: boolean }) {
+  return <button type="button" className={"source-option " + (active ? "selected" : "")} onClick={onClick} disabled={wip}><span className="source-radio" aria-hidden="true" /><strong>{title}{wip && <em>WIP</em>}</strong><small>{detail}</small></button>;
 }
 
-function PasteInput({ value, onChange, parsed, rawParsed, bareBundleName, onBareBundleName }: { value: string; onChange: (value: string) => void; parsed: ExcelPasteResult; rawParsed: ExcelPasteResult; bareBundleName: string; onBareBundleName: (value: string) => void }) {
-  return <section className="adapter-card"><h2>วางข้อมูลจาก Request</h2><p>ก๊อบตารางทั้งหมดจาก Excel, Google Sheet หรือข้อความใน Request แล้ววางได้เลย</p><BareBundleName parsed={rawParsed} value={bareBundleName} onChange={onBareBundleName} /><textarea className="request-textarea" value={value} onChange={(event) => onChange(event.target.value)} placeholder={"Item ID\tItem Name\tAmt\n4235100\tBelorb Stabilizer\t1"} spellCheck={false} />{value && <ParseStatus parsed={parsed} />}</section>;
+function PasteInput({ value, onChange, parsed }: { value: string; onChange: (value: string) => void; parsed: ExcelPasteResult }) {
+  return <section className="adapter-card"><h2>วางข้อมูลจาก Request</h2><p>ก๊อบตารางทั้งหมดจาก Excel, Google Sheet หรือข้อความใน Request แล้ววางได้เลย ชื่อแต่ละ Bundle จะตั้งได้ในรายการด้านขวา</p><textarea className="request-textarea" value={value} onChange={(event) => onChange(event.target.value)} placeholder={"Item ID\tItem Name\tAmt\n4235100\tBelorb Stabilizer\t1"} spellCheck={false} />{value && <ParseStatus parsed={parsed} />}</section>;
 }
 
 function SpreadsheetInput({ fileName, tabs, selectedTab, loading, error, parsed, rawParsed, bareBundleName, onBareBundleName, onChoose, onTabChange }: { fileName: string; tabs: SpreadsheetTab[]; selectedTab: string; loading: boolean; error: string; parsed: ExcelPasteResult; rawParsed: ExcelPasteResult; bareBundleName: string; onBareBundleName: (value: string) => void; onChoose: (file: File | null) => void; onTabChange: (tab: string) => void }) {
@@ -364,11 +361,11 @@ function safeFilename(value: string) {
   return value.trim().replace(/[<>:"/\\|?*]/g, "-").replace(/\s+/g, " ").slice(0, 100) || "bundle-import";
 }
 
-function BundlePreview({ bundle, index, locked, onToggle }: { bundle: SpecBundle; index: number; locked: boolean; onToggle: () => void }) {
+function BundlePreview({ bundle, index, locked, onToggle, onNameChange }: { bundle: SpecBundle; index: number; locked: boolean; onToggle: () => void; onNameChange: (name: string) => void }) {
   const chanceTotal = bundle.is_gacha ? bundle.items.reduce((total, item) => total + (item.chance || 0), 0) : null;
   return <article className={"bundle-preview " + (locked ? "locked" : "")}>
     <div className="bundle-preview-top"><label><input type="checkbox" checked={locked} onChange={onToggle} /><span>{locked ? "ล็อกแล้ว" : "เลือกส่งออก"}</span></label><span className={bundle.is_gacha ? "random-tag" : "fixed-tag"}>{bundle.is_gacha ? "Random" : "Fixed"}</span></div>
-    <h3>{bundle.name || "Bundle " + (index + 1)}</h3>
+    <label className="bundle-name-editor"><span>ชื่อ Bundle {index + 1}</span><input aria-label={`ชื่อ Bundle ${index + 1}`} value={bundle.name === "Untitled Bundle" ? "" : bundle.name} onChange={(event) => onNameChange(event.target.value)} placeholder={`Bundle ${index + 1}`} /></label>
     <div className="bundle-meta"><span>Seed {bundle.seed_point ?? "-"}</span><span>Limit {bundle.purchase_limit ?? "-"}</span><span>{bundle.items.length} items</span>{chanceTotal !== null && <span>Chance {chanceTotal}%</span>}</div>
     <ul>{bundle.items.slice(0, 4).map((item, itemIndex) => <li key={item.item_id + "-" + itemIndex}><code>{item.item_id}</code><span>{item.name}</span><b>×{item.amount}</b></li>)}{bundle.items.length > 4 && <li className="more-items">และอีก {bundle.items.length - 4} รายการ</li>}</ul>
   </article>;
