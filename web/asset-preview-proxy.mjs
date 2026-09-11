@@ -257,7 +257,7 @@ async function buildProductImportFromTemplate(draft) {
   };
   const values = [
     "GAME", draft.name, draft.name, draft.category || "", "", "", "", "", "", "", "",
-    draft.displayOrder || "", dateForTemplate(draft.saleStart), dateForTemplate(draft.saleEnd), draft.purchaseLimit || "", "", "", "", "", "", "", "",
+    draft.displayOrder || "", dateForTemplate(draft.saleStart), dateForTemplate(draft.saleEnd), draft.purchaseLimit || "", "", "", "", "", "", "",
     "TRUE", "TRUE", "FALSE", draft.currency || "", draft.actualPrice || "", draft.fullPrice || "",
     "", "", "", "", "", "", draft.bundleNames.join(", "),
   ];
