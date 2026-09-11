@@ -3725,3 +3725,8 @@ footer {
 .bare-bundle-name input { box-sizing:border-box; width:100%; min-height:38px; border:1px solid #cfd8e5; border-radius:5px; background:#fff; padding:8px 9px; color:var(--ink); font:inherit; font-size:13px; }
 .bare-bundle-name small { color:var(--muted); font-size:11px; font-weight:400; }
 .hub-create-card.bundle-only { grid-column:1/-1; min-height:76px; }
+.bundle-batch-name { display:grid; gap:4px; margin:12px 0 0; padding:10px; border:1px solid #dce5f1; border-radius:6px; background:#f8fbff; }
+.bundle-batch-name span { color:var(--muted); font-size:11px; font-weight:700; }
+.bundle-batch-name input { box-sizing:border-box; width:100%; min-height:34px; border:1px solid #cfd8e5; border-radius:5px; background:#fff; padding:7px 8px; color:var(--ink); font:inherit; font-size:13px; font-weight:700; }
+.bundle-batch-name small { color:var(--muted); font-size:11px; line-height:1.45; }
+.bundle-batch-name input:focus { border-color:var(--accent); outline:0; box-shadow:0 0 0 3px #e7f0ff; }

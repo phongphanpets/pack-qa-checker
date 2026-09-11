@@ -31,6 +31,8 @@ test("Pages starts with local Bundle Import and exports without a server", async
     const textarea = page.locator("textarea").first();
     await textarea.fill("1315002\tGod Fellow Ticket\t30");
     await page.getByText("God Fellow Ticket", { exact: true }).first().waitFor();
+    await page.getByLabel("ชื่อ Bundle 1").pressSequentially("ชื่อพิมพ์ต่อเนื่อง");
+    assert.equal(await page.getByLabel("ชื่อ Bundle 1").inputValue(), "ชื่อพิมพ์ต่อเนื่อง");
     const selection = page.locator(".bundle-preview-top input[type=checkbox]").first();
     await selection.check();
     assert.equal(await selection.isChecked(), true);
@@ -42,6 +44,9 @@ test("Pages starts with local Bundle Import and exports without a server", async
     await textarea.fill("Bundle Name\tA\nItem ID\tItem Name\tAmt\n51201\tLanistar Key\t1\n\nBundle Name\tB\nItem ID\tItem Name\tAmt\n52001\tMemory Key\t2");
     await page.getByLabel("ชื่อ Bundle 1").fill("Bundle ที่หนึ่ง");
     await page.getByLabel("ชื่อ Bundle 2").fill("Bundle ที่สอง");
+    assert.equal(await page.getByLabel("ชื่อ Bundle 1").inputValue(), "Bundle ที่หนึ่ง");
+    assert.equal(await page.getByLabel("ชื่อ Bundle 2").inputValue(), "Bundle ที่สอง");
+    await page.getByLabel("ตั้งชื่อ Bundle ทั้งชุด").fill("ชุดทดลอง");
     assert.equal(await page.getByLabel("ชื่อ Bundle 1").inputValue(), "Bundle ที่หนึ่ง");
     assert.equal(await page.getByLabel("ชื่อ Bundle 2").inputValue(), "Bundle ที่สอง");
     await selection.check();
