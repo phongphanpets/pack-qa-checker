@@ -237,6 +237,24 @@ test("splits stacked price rows into bundles and ignores not found placeholders"
   assert.ok(result.bundles.flatMap((bundle) => bundle.items).every((item) => item.item_id !== "not found"));
 });
 
+test("splits Step Up rows and preserves decimal GSP and Player EXP", () => {
+  const result = parseExcelPaste(
+    "GSP Earn\tEXP Rank Earn\tIMG\tItem ID\tItem Name\tAmt\n" +
+      "2990.5\t299.05\t\tPopo_God_1\tGod Coin 1\t5\n" +
+      "\t\t40162\tGod Particles : Dawn Raven Rexipher\t30\n" +
+      "\t\tnot found\t\tnot found\t0\n" +
+      "3190.25\t319.025\t\tPopo_God_1\tGod Coin 1\t5\n" +
+      "\t\t40162\tGod Particles : Dawn Raven Rexipher\t30",
+  );
+
+  assert.equal(result.valid, true);
+  assert.equal(result.bundles.length, 2);
+  assert.deepEqual(result.bundles.map((bundle) => bundle.seed_point), [null, null]);
+  assert.deepEqual(result.bundles.map((bundle) => bundle.gsp_earn), [2990.5, 3190.25]);
+  assert.deepEqual(result.bundles.map((bundle) => bundle.player_exp), [299.05, 319.025]);
+  assert.deepEqual(result.bundles.map((bundle) => bundle.items.length), [2, 2]);
+});
+
 test("reads GSP Earn and EXP Rank Earn from the bundle summary row", () => {
   const result = parseExcelPaste(
     "Product Name\tSample Bundle\n" +

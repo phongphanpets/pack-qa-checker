@@ -74,10 +74,11 @@ export function parseExcelPaste(input: string): ExcelPasteResult {
         findColumn(row, amountHeaders) >= 0,
     )
     .map(({ index }) => index);
-  const sections = headerRows.map((headerRow, index) => {
+  const sections = headerRows.flatMap((headerRow, index) => {
     const nextHeader = headerRows[index + 1] ?? rows.length;
     const start = sectionStart(rows, headerRow, index === 0 ? 0 : headerRows[index - 1] + 1);
     const end = sectionEnd(rows, headerRow, nextHeader);
+    if (isStepUpHeader(rows[headerRow])) return parseStepUpBundleSections(rows.slice(start, end), input, headerRow - start);
     return parseBundleSection(rows.slice(start, end), input, headerRow - start);
   });
   if (!sections.length) {
@@ -223,6 +224,79 @@ function parseStackedPriceBundles(rows: Cell[][], originalInput: string) {
         itemCount: items.length,
         seedPoint,
         gspEarn: null,
+        purchaseLimit: null,
+        isGacha: false,
+        isPermanent: false,
+        fixedItemCount: items.length,
+        randomOutcomeCount: 0,
+        chanceTotal: null,
+      },
+    };
+  });
+}
+
+function isStepUpHeader(row: Cell[]) {
+  const gspColumn = findColumn(row, ["gsp earn", "gsp", "gsp_earn"]);
+  const expColumn = findColumn(row, ["exp rank earn", "player exp", "player experience", "exp"]);
+  return gspColumn === 0 && expColumn === 1 && findColumn(row, ["seed point", "seed_point"]) < 0;
+}
+
+function parseStepUpBundleSections(rows: Cell[][], originalInput: string, headerRow: number) {
+  const gspColumn = findColumn(rows[headerRow], ["gsp earn", "gsp", "gsp_earn"]);
+  const expColumn = findColumn(rows[headerRow], ["exp rank earn", "player exp", "player experience", "exp"]);
+  const starts = rows.slice(headerRow + 1)
+    .map((row, relativeIndex) => ({ row, index: headerRow + 1 + relativeIndex, item: findShiftedItem(row) }))
+    .filter(({ row, item }) => decimal(row[gspColumn]?.value) !== null && decimal(row[expColumn]?.value) !== null && Boolean(item));
+  if (!starts.length) return [parseBundleSection(rows, originalInput, headerRow)];
+
+  return starts.map(({ row, index }, bundleIndex) => {
+    const end = starts[bundleIndex + 1]?.index ?? rows.length;
+    const items = rows.slice(index, end)
+      .map((itemRow) => findShiftedItem(itemRow))
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .map(({ itemId, name, amount }) => ({ itemId, name, amount, amountValue: integer(amount.value)! }));
+    const bundleId = deterministicBundleId(`${originalInput}\nstep-up-bundle\n${bundleIndex}`);
+    const name = "Untitled Bundle";
+    const gspEarn = decimal(row[gspColumn]?.value);
+    const playerExp = decimal(row[expColumn]?.value);
+    const documentItems = items.map((item) => ({
+      item_id: field(item.itemId, clean(item.itemId.value)),
+      name: field(item.name, clean(item.name.value)),
+      amount: field(item.amount, item.amountValue),
+    }));
+    return {
+      documentBundle: {
+        bundle_id: bundleId,
+        spec: {
+          bundle_id: { value: bundleId, source: "spec", confidence: 1, raw_text: "generated from step-up rows", locator: `excel-paste:R${row[gspColumn].row}C${row[gspColumn].column}` },
+          name: { value: name, source: "spec", confidence: 1, raw_text: name, locator: "excel-paste:generated-bundle-name" },
+          gsp_earn: field(row[gspColumn], gspEarn),
+          player_exp: field(row[expColumn], playerExp),
+          is_gacha: false,
+          items: documentItems,
+        },
+      },
+      bundle: {
+        bundle_id: bundleId,
+        name,
+        seed_point: null,
+        gsp_earn: gspEarn,
+        player_exp: playerExp,
+        purchase_limit: null,
+        is_gacha: false,
+        is_permanent: false,
+        items: items.map((item) => ({ item_id: clean(item.itemId.value), name: clean(item.name.value), amount: item.amountValue, chance: null })),
+      },
+      valid: items.length > 0,
+      warnings: bundleIndex === 0 ? [{ code: "GENERATED_BUNDLE_ID" as const, message: `พบ ${starts.length} Step Up Bundles ระบบแยกตาม GSP Earn และ EXP Rank Earn แล้ว กรุณาตั้งชื่อก่อน Export` }] : [],
+      summary: {
+        bundleId,
+        generatedBundleId: true,
+        name,
+        itemCount: items.length,
+        seedPoint: null,
+        gspEarn,
+        playerExp,
         purchaseLimit: null,
         isGacha: false,
         isPermanent: false,
