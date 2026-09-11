@@ -1,11 +1,13 @@
 "use client";
+/* The line editor intentionally synchronizes initial values when the selected bundles change. */
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useMemo, useState } from "react";
 import { localProductExport, type LocalProductDraft } from "@/lib/local-template-export";
 import type { SpecBundle } from "@/lib/website-ocr";
 
 type Props = { requestId: string; productName: string; bundles: SpecBundle[]; selectedIndexes: Set<number>; fallbackPrice: string; fallbackLimit: string };
-type ProductLine = { key: string; bundleName: string; name: string; price: string; saleStart: string; saleEnd: string };
+type ProductLine = { key: string; bundleName: string; name: string; price: string; displayOrder: string; saleStart: string; saleEnd: string };
 
 function dateValue(date: Date) {
   const offset = date.getTimezoneOffset() * 60_000;
@@ -48,6 +50,7 @@ export default function ProductExportPanel({ productName, bundles, selectedIndex
         bundleName: bundle.name || `Bundle #${index + 1}`,
         name: bundle.name || (selectedBundles.length === 1 ? productName : `Product #${index + 1}`),
         price: initialPrice(bundle, fallbackPrice),
+        displayOrder: String((Number(displayOrder) || 500) - index),
         saleStart: commonStart,
         saleEnd: commonEnd,
       };
@@ -59,14 +62,20 @@ export default function ProductExportPanel({ productName, bundles, selectedIndex
 
   const updateLine = (key: string, field: keyof Omit<ProductLine, "key" | "bundleName">, value: string) => setLines((current) => current.map((line) => line.key === key ? { ...line, [field]: value } : line));
   const applyDates = () => setLines((current) => current.map((line) => ({ ...line, saleStart: commonStart, saleEnd: commonEnd })));
+  const applyPriceOrder = () => {
+    const highestOrder = Number(displayOrder) || 0;
+    setLines((current) => current.map((line, index) => ({ line, index })).sort((left, right) => {
+      const priceDifference = Number(left.line.price) - Number(right.line.price);
+      return Number.isFinite(priceDifference) && priceDifference !== 0 ? priceDifference : left.index - right.index;
+    }).map(({ line }, index) => ({ ...line, displayOrder: String(highestOrder - index) })));
+  };
 
   async function download() {
     if (lines.some((line) => !line.name.trim() || !line.price.trim())) { setExportError("กรอกชื่อ Product และราคา SP ให้ครบก่อน Export"); return; }
     setExporting(true); setExportError("");
     try {
-      const baseOrder = Number(displayOrder) || 0;
-      const drafts: LocalProductDraft[] = lines.map((line, index) => ({
-        name: line.name, category, displayOrder: String(baseOrder + index), saleStart: line.saleStart, saleEnd: line.saleEnd,
+      const drafts: LocalProductDraft[] = lines.map((line) => ({
+        name: line.name, category, displayOrder: line.displayOrder, saleStart: line.saleStart, saleEnd: line.saleEnd,
         purchaseLimit, currency, actualPrice: line.price, fullPrice: line.price, bundleNames: [line.bundleName],
       }));
       const blob = await localProductExport(drafts);
@@ -77,7 +86,7 @@ export default function ProductExportPanel({ productName, bundles, selectedIndex
     finally { setExporting(false); }
   }
 
-  return <section className="product-export-panel"><div className="product-export-heading"><div><p className="eyebrow">Optional · Product Import</p><h2>สร้าง Product แยกตาม Bundle</h2><p>ราคา SP เริ่มจาก GSP Earn ของแต่ละ Bundle แล้วแก้เฉพาะรายการได้</p></div><button type="button" className="quiet-button" onClick={() => setOpen((value) => !value)}>{open ? "ปิดการตั้งค่า Product" : "ตั้งค่า Product"}</button></div>{open && <div className="product-export-body"><div className="field-grid product-fields"><CategoryPicker value={category} onChange={setCategory} /><Field label="ลำดับการแสดงเริ่มต้น" value={displayOrder} onChange={setDisplayOrder} /><Field label="จำกัดซื้อต่อ Player" value={purchaseLimit} onChange={setPurchaseLimit} /><Field label="สกุลเงิน" value={currency} onChange={setCurrency} /></div><div className="product-schedule"><div><Field label="เวลาเริ่มขายทั้งหมด" value={commonStart} onChange={setCommonStart} /><Field label="เวลาหยุดขายทั้งหมด" value={commonEnd} onChange={setCommonEnd} /></div><button type="button" className="quiet-button" onClick={applyDates}>ใช้เวลานี้กับทุก Product</button></div><div className="product-lines"><div className="product-lines-heading"><b>Product ที่จะสร้าง ({lines.length})</b><span>แก้ชื่อ ราคา SP และช่วงเวลาราย Product ได้</span></div>{lines.map((line, index) => <div className="product-line" key={line.key}><span className="product-line-number">{index + 1}</span><label><span>ชื่อ Product</span><input aria-label={`ชื่อ Product ${index + 1}`} value={line.name} onChange={(event) => updateLine(line.key, "name", event.target.value)} /></label><label><span>ราคา SP</span><input aria-label={`ราคา SP ${index + 1}`} inputMode="decimal" value={line.price} onChange={(event) => updateLine(line.key, "price", event.target.value)} /></label><label><span>เริ่มขาย</span><input aria-label={`เริ่มขาย ${index + 1}`} value={line.saleStart} onChange={(event) => updateLine(line.key, "saleStart", event.target.value)} /></label><label><span>หยุดขาย</span><input aria-label={`หยุดขาย ${index + 1}`} value={line.saleEnd} onChange={(event) => updateLine(line.key, "saleEnd", event.target.value)} /></label><small>Bundle: {line.bundleName}</small></div>)}</div><div className="product-export-footer"><span>สถานะเปิดใช้งาน: True · โหมดทดสอบ: True · ซ่อนสินค้า: False</span><button type="button" className="primary-button product-download" disabled={!lines.length || exporting} onClick={() => void download()}>{exporting ? "กำลังสร้างไฟล์..." : `Export Product Import (${lines.length})`}</button></div>{exportError && <p className="hub-error">{exportError}</p>}</div>}</section>;
+  return <section className="product-export-panel"><div className="product-export-heading"><div><p className="eyebrow">Optional · Product Import</p><h2>สร้าง Product แยกตาม Bundle</h2><p>ราคา SP เริ่มจาก GSP Earn ของแต่ละ Bundle แล้วแก้เฉพาะรายการได้</p></div><button type="button" className="quiet-button" onClick={() => setOpen((value) => !value)}>{open ? "ปิดการตั้งค่า Product" : "ตั้งค่า Product"}</button></div>{open && <div className="product-export-body"><div className="field-grid product-fields"><CategoryPicker value={category} onChange={setCategory} /><Field label="ลำดับแสดงสูงสุด" value={displayOrder} onChange={setDisplayOrder} /><Field label="จำกัดซื้อต่อ Player" value={purchaseLimit} onChange={setPurchaseLimit} /><Field label="สกุลเงิน" value={currency} onChange={setCurrency} /></div><div className="product-schedule"><div><Field label="เวลาเริ่มขายทั้งหมด" value={commonStart} onChange={setCommonStart} /><Field label="เวลาหยุดขายทั้งหมด" value={commonEnd} onChange={setCommonEnd} /></div><button type="button" className="quiet-button" onClick={applyDates}>ใช้เวลานี้กับทุก Product</button></div><div className="product-order-tools"><span>กด Auto เพื่อเรียงราคาน้อยไปมาก: 50 SP = 510, 100 SP = 509, 100 SP = 508</span><button type="button" className="quiet-button" onClick={applyPriceOrder}>Auto ลำดับตามราคา</button></div><div className="product-lines"><div className="product-lines-heading"><b>Product ที่จะสร้าง ({lines.length})</b><span>แก้ชื่อ ราคา SP ลำดับ และช่วงเวลาราย Product ได้</span></div>{lines.map((line, index) => <div className="product-line" key={line.key}><span className="product-line-number">{index + 1}</span><label><span>ชื่อ Product</span><input aria-label={`ชื่อ Product ${index + 1}`} value={line.name} onChange={(event) => updateLine(line.key, "name", event.target.value)} /></label><label><span>ราคา SP</span><input aria-label={`ราคา SP ${index + 1}`} inputMode="decimal" value={line.price} onChange={(event) => updateLine(line.key, "price", event.target.value)} /></label><label><span>ลำดับแสดง</span><input aria-label={`ลำดับแสดง ${index + 1}`} inputMode="numeric" value={line.displayOrder} onChange={(event) => updateLine(line.key, "displayOrder", event.target.value)} /></label><label><span>เริ่มขาย</span><input aria-label={`เริ่มขาย ${index + 1}`} value={line.saleStart} onChange={(event) => updateLine(line.key, "saleStart", event.target.value)} /></label><label><span>หยุดขาย</span><input aria-label={`หยุดขาย ${index + 1}`} value={line.saleEnd} onChange={(event) => updateLine(line.key, "saleEnd", event.target.value)} /></label><small>Bundle: {line.bundleName}</small></div>)}</div><div className="product-export-footer"><span>สถานะเปิดใช้งาน: True · โหมดทดสอบ: True · ซ่อนสินค้า: False</span><button type="button" className="primary-button product-download" disabled={!lines.length || exporting} onClick={() => void download()}>{exporting ? "กำลังสร้างไฟล์..." : `Export Product Import (${lines.length})`}</button></div>{exportError && <p className="hub-error">{exportError}</p>}</div>}</section>;
 }
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label><span>{label}</span><input value={value} onChange={(event) => onChange(event.target.value)} /></label>; }
