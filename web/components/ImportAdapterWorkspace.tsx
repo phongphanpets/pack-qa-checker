@@ -318,7 +318,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
         </>}
       </aside>
     </section>
-    {showProductExport && selectedCount > 0 && requestType !== "ITEM_CODE" && <ProductExportPanel requestId={requestId} productName={exportName || bundleName} bundles={bundles} selectedIndexes={locked} fallbackPrice={price || String(bundles[0]?.seed_point ?? "")} fallbackLimit={limit || String(bundles[0]?.purchase_limit ?? "")} />}
+    {showProductExport && selectedCount > 0 && requestType !== "ITEM_CODE" && <ProductExportPanel requestId={requestId} productName={bundleNameBase || exportName || bundleName} bundles={bundles} selectedIndexes={locked} fallbackPrice={price || String(bundles[0]?.seed_point ?? "")} fallbackLimit={limit || String(bundles[0]?.purchase_limit ?? "")} />}
     {bundles.length > 0 && <section className="adapter-validation"><div className="section-heading"><div><p className="eyebrow">Step 3</p><h2>ตรวจ Item ก่อน Export</h2></div><p>เทียบกับ Data กลางเพื่อลด Item ID หรือชื่อที่ไม่ตรง</p></div><ItemCatalogCheck bundles={bundles} onCatalogChange={setCatalog} /></section>}
   </main>;
 }
