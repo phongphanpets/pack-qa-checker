@@ -10,6 +10,8 @@ export type SpecItem = {
 };
 
 export type SpecBundle = {
+  product_group?: string;
+  product_name?: string | null;
   bundle_id: number;
   name: string | null;
   seed_point: number | null;
