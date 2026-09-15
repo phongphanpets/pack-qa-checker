@@ -29,6 +29,20 @@ test("Pages starts with local Bundle Import and exports without a server", async
     await page.getByText("แปลงตารางเป็น Bundle พร้อม Import", { exact: true }).waitFor();
     assert.equal(await page.getByText("เซิร์ฟเวอร์ Request และ History", { exact: true }).count(), 0);
     const textarea = page.locator("textarea").first();
+    await page.getByRole("button", { name: "สร้าง Product เอง", exact: true }).click();
+    await page.getByLabel("จำนวน Product", { exact: true }).fill("2");
+    await page.getByRole("button", { name: "ใช้จำนวนนี้", exact: true }).click();
+    for (let i = 1; i <= 2; i++) {
+      await page.getByLabel(`ชื่อ Product ${i}`, { exact: true }).fill(`Manual Product ${i}`);
+      await page.getByLabel(`ราคา SP ${i}`, { exact: true }).fill(String(i * 100));
+      await page.getByLabel(`Bundle ของ Product ${i}`, { exact: true }).fill(`Reward ${i}\nBonus ${i}`);
+    }
+    const manualDownload = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Export Product Import (2)", exact: true }).click();
+    const manualBook = unzipSync(await readFile(await (await manualDownload).path()));
+    assert.match(strFromU8(manualBook["xl/worksheets/sheet1.xml"]), /r="AH3"/);
+    assert.match(strFromU8(manualBook["xl/sharedStrings.xml"]), /Reward 2, Bonus 2/);
+    await page.getByRole("button", { name: "กลับไป Bundle Import", exact: true }).click();
     await textarea.fill("1315002\tGod Fellow Ticket\t30");
     await page.getByText("God Fellow Ticket", { exact: true }).first().waitFor();
     await page.getByLabel("ชื่อ Bundle 1").pressSequentially("ชื่อพิมพ์ต่อเนื่อง");
@@ -86,6 +100,7 @@ test("Pages starts with local Bundle Import and exports without a server", async
     assert.deepEqual(combined["xl/worksheets/sheet1.xml"], workbook["xl/worksheets/sheet1.xml"]);
     await page.getByRole("button", { name: "ตั้งค่า Product", exact: true }).click();
     assert.equal(await page.getByLabel("สกุลเงิน", { exact: true }).inputValue(), "Seed Point");
+    await page.getByLabel("ราคา SP 1", { exact: true }).fill("100");
     const productDownload = page.waitForEvent("download");
     await page.getByRole("button", { name: /Export Product Import \(1\)/ }).click();
     const product = unzipSync(await readFile(await (await productDownload).path()));

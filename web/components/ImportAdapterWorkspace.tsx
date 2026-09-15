@@ -80,6 +80,7 @@ type ImportAdapterWorkspaceProps = {
 
 export default function ImportAdapterWorkspace({ initialScreen = "hub", showProductExport = true }: ImportAdapterWorkspaceProps) {
   const [screen, setScreen] = useState<"hub" | "adapter">(initialScreen);
+  const [manualProduct, setManualProduct] = useState(false);
   const [sourceMode, setSourceMode] = useState<SourceMode>("paste");
   const [pasteValue, setPasteValue] = useState("");
   const [exportName, setExportName] = useState("bundle-import");
@@ -279,10 +280,12 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
 
   if (screen === "hub") return <RequestHub onOpenAdapter={() => setScreen("adapter")} onStartBundleOnly={startBundleOnly} />;
 
+  if (manualProduct) return <main className="adapter-shell"><button type="button" className="quiet-button" onClick={() => setManualProduct(false)}>กลับไป Bundle Import</button><ProductExportPanel manual requestId="" productName="products" bundles={[]} selectedIndexes={new Set()} fallbackPrice="" fallbackLimit="1" /></main>;
+
   return <main className="adapter-shell">
     <header className="adapter-header">
       <div className="adapter-brand"><span className="adapter-mark">BI</span><div><strong>Bundle Import</strong><span>Import Studio</span></div></div>
-      <div className="adapter-header-actions"><span className="adapter-status">Draft</span><button type="button" className="quiet-button" onClick={() => setScreen("hub")}>Request Hub</button></div>
+      <div className="adapter-header-actions"><button type="button" className="quiet-button" onClick={() => setManualProduct(true)}>สร้าง Product เอง</button><span className="adapter-status">Draft</span><button type="button" className="quiet-button" onClick={() => setScreen("hub")}>Request Hub</button></div>
     </header>
     <section className="adapter-intro">
       <div><p className="eyebrow">Create import batch</p><h1>แปลงตารางเป็น Bundle พร้อม Import</h1><p>วางตาราง ตั้งชื่อแต่ละ Bundle ตรวจรายการ และ Export ได้ทันทีในเบราว์เซอร์นี้</p></div>
