@@ -55,6 +55,7 @@ type ParsedItem = {
   chance: Cell | null;
   chanceValue: number | null;
   secretChanceValue?: number | null;
+  tier?: string;
 };
 
 export function parseExcelPaste(input: string): ExcelPasteResult {
@@ -378,7 +379,7 @@ function parseBundleSection(
   };
   const bundle: SpecBundle | null = bundleId === null ? null : {
     bundle_id: bundleId, name, seed_point: seedPoint, gsp_earn: gspEarn, player_exp: playerExp, purchase_limit: purchaseLimit, is_gacha: isGacha, is_permanent: isPermanent,
-    items: items.map((item) => ({ item_id: clean(item.itemId.value), name: clean(item.name.value), amount: item.amountValue, chance: item.chanceValue, ...(item.secretChanceValue !== undefined ? { secret_chance: item.secretChanceValue } : {}) })),
+    items: items.map((item) => ({ item_id: clean(item.itemId.value), name: clean(item.name.value), amount: item.amountValue, chance: item.chanceValue, ...(item.tier ? { tier: item.tier } : {}), ...(item.secretChanceValue !== undefined ? { secret_chance: item.secretChanceValue } : {}) })),
   };
   return { documentBundle, bundle, valid, warnings, summary: { bundleId, generatedBundleId, name, itemCount: items.length, seedPoint, gspEarn, playerExp, purchaseLimit, isGacha, isPermanent, fixedItemCount: items.length - randomItems.length, randomOutcomeCount: randomItems.length, chanceTotal } };
 }
@@ -567,7 +568,8 @@ function parseItems(rows: Cell[][], headerRow: number, warnings: ExcelPasteWarni
   const nameColumn = findColumn(rows[headerRow], itemNameHeaders);
   const amountColumn = findColumn(rows[headerRow], amountHeaders);
   const chanceColumn = findColumn(rows[headerRow], chanceHeaders);
-  const secretChanceColumn = findColumn(rows[headerRow], ["secret chance", "secret_chance", "display chance", "เรทโชว์"]);
+  const secretChanceColumn = findColumn(rows[headerRow], ["secret chance", "secret_chance", "display chance", "เรทโชว์", "chance จริง"]);
+  const tierColumn = findColumn(rows[headerRow], ["tier", "grade"]);
   const items: ParsedItem[] = [];
 
   for (const row of rows.slice(headerRow + 1)) {
@@ -608,6 +610,7 @@ function parseItems(rows: Cell[][], headerRow: number, warnings: ExcelPasteWarni
       amountValue,
       chance,
       chanceValue,
+      ...(tierColumn >= 0 ? { tier: clean(row[tierColumn + offset]?.value) || "Trainee" } : {}),
       ...(secretChanceColumn >= 0 ? { secretChanceValue: decimal(row[secretChanceColumn + (detected ? detected.itemId.column - idColumn - 1 : 0)]?.value) } : {}),
     });
   }
@@ -823,6 +826,7 @@ const itemNameHeaders = [
 ];
 const amountHeaders = ["amt", "amount", "qty", "quantity", "จำนวน"];
 const chanceHeaders = [
+  "chance ข่าวจ้า",
   "chance",
   "rate",
   "%",

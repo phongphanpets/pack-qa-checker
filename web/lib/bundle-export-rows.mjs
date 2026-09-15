@@ -43,9 +43,9 @@ export function prepareBundleRows(bundles, { mirrorChance = false, catalog = [] 
         if (amount === null || amount <= 0) throw new Error("จำนวนต้องมากกว่า 0");
         const chance = bundle.is_gacha ? numeric(item.chance) : null;
         if (bundle.is_gacha && (chance === null || chance < 0 || chance > 100)) throw new Error("Chance ต้องเป็นตัวเลข 0–100");
-        const display = bundle.is_gacha ? mirrorChance ? chance : numeric(item.secret_chance) : null;
+        const display = bundle.is_gacha ? item.secret_chance != null ? numeric(item.secret_chance) : mirrorChance ? chance : null : null;
         if (display !== null && (display < 0 || display > 100)) throw new Error("Secret Chance ต้องอยู่ในช่วง 0–100");
-        if (!mirrorChance && bundle.is_gacha && item.secret_chance != null && String(item.secret_chance).trim() !== "" && display === null) throw new Error("Secret Chance ไม่ใช่ตัวเลข");
+        if (bundle.is_gacha && item.secret_chance != null && String(item.secret_chance).trim() !== "" && display === null) throw new Error("Secret Chance ไม่ใช่ตัวเลข");
         const record = catalogById.get(reward.id.toLowerCase()) || catalogById.get(String(item.item_id).trim().toLowerCase());
         const tier = String(item.tier || record?.tier || "Trainee").trim();
         if (/^(true|false|#value!|not found)$/i.test(tier)) throw new Error("Tier ไม่ถูกต้อง");
