@@ -9,10 +9,10 @@ test("web gacha preserves both percentage rates and source grades", () => {
   const parsed = parseExcelPaste(source);
   assert.equal(parsed.valid, true);
   assert.equal(parsed.bundles.length, 1);
-  assert.deepEqual(parsed.bundles[0].items.map(i => [i.chance, i.secret_chance, i.tier]), [[2, 1.25, "UR(K/F/C)"], [0.129, 0.125, "UR(K/F/C)"], [0.129, 0.125, "Trainee"]]);
+  assert.deepEqual(parsed.bundles[0].items.map(i => [i.chance, i.secret_chance, i.tier]), [[1.25, 2, "UR(K/F/C)"], [0.125, 0.129, "UR(K/F/C)"], [0.125, 0.129, "Trainee"]]);
   const output = prepareBundleRows(expandBundleRewards(parsed.bundles.map(b => ({ ...b, name: "My Gacha" }))), { mirrorChance: true });
   assert.deepEqual(output.errors, []);
-  assert.deepEqual(output.rows.map(r => [r[5], r[7], r[8]]), [["UR(K/F/C)", 2, 1.25], ["UR(K/F/C)", 0.129, 0.125], ["Trainee", 0.129, 0.125]]);
+  assert.deepEqual(output.rows.map(r => [r[5], r[7], r[8]]), [["UR(K/F/C)", 1.25, 2], ["UR(K/F/C)", 0.125, 0.129], ["Trainee", 0.125, 0.129]]);
 });
 
 test("maps gacha grades and preserves already valid import tiers", () => {

@@ -577,7 +577,7 @@ function parseItems(rows: Cell[][], headerRow: number, warnings: ExcelPasteWarni
   const nameColumn = findColumn(rows[headerRow], itemNameHeaders);
   const amountColumn = findColumn(rows[headerRow], amountHeaders);
   const chanceColumn = findColumn(rows[headerRow], chanceHeaders);
-  const secretChanceColumn = findColumn(rows[headerRow], ["secret chance", "secret_chance", "display chance", "เรทโชว์", "chance จริง"]);
+  const secretChanceColumn = findColumn(rows[headerRow], ["secret chance", "secret_chance", "display chance", "เรทโชว์", "chance ข่าวจ้า"]);
   const tierColumn = findColumn(rows[headerRow], ["tier", "grade"]);
   const items: ParsedItem[] = [];
 
@@ -835,7 +835,7 @@ const itemNameHeaders = [
 ];
 const amountHeaders = ["amt", "amount", "qty", "quantity", "จำนวน"];
 const chanceHeaders = [
-  "chance ข่าวจ้า",
+  "chance จริง",
   "chance",
   "rate",
   "%",
