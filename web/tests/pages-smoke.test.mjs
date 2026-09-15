@@ -38,9 +38,12 @@ test("Pages starts with local Bundle Import and exports without a server", async
       await page.getByLabel(`Bundle ของ Product ${i}`, { exact: true }).fill(`Reward ${i}\nBonus ${i}`);
     }
     const manualDownload = page.waitForEvent("download");
+    await page.getByLabel("ไม่จำกัด", { exact: true }).check();
+    assert.equal(await page.getByLabel("จำกัดซื้อต่อ Player", { exact: true }).isDisabled(), true);
     await page.getByRole("button", { name: "Export Product Import (2)", exact: true }).click();
     const manualBook = unzipSync(await readFile(await (await manualDownload).path()));
     assert.match(strFromU8(manualBook["xl/worksheets/sheet1.xml"]), /r="AH3"/);
+    assert.doesNotMatch(strFromU8(manualBook["xl/worksheets/sheet1.xml"]), /r="O[23]"/);
     assert.match(strFromU8(manualBook["xl/sharedStrings.xml"]), /Reward 2, Bonus 2/);
     await page.getByRole("button", { name: "กลับไป Bundle Import", exact: true }).click();
     await textarea.fill("1315002\tGod Fellow Ticket\t30");

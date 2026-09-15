@@ -3734,6 +3734,10 @@ footer {
 .product-line .product-bundle-input { grid-column:2/-1; }
 .product-bundle-input textarea { width:100%; box-sizing:border-box; min-height:64px; resize:vertical; border:1px solid #cfd8e5; border-radius:5px; padding:8px; font:inherit; }
 .adapter-header-actions { flex-wrap:wrap; }
+.product-limit { display:grid; gap:8px; }
+.product-limit .product-unlimited { display:flex; align-items:center; gap:7px; }
+.product-unlimited input { width:16px; min-height:16px; height:16px; }
+.product-limit input:disabled { background:#f1f3f5; color:#657187; }
 .product-name-top { display:grid; gap:6px; margin-top:18px; max-width:560px; color:#526079; font-size:12px; font-weight:700; }
 .product-name-top input,.category-picker input { box-sizing:border-box; width:100%; min-height:38px; border:1px solid #cfd8e5; border-radius:5px; background:#fff; padding:8px 9px; color:var(--ink); font:inherit; font-size:14px; font-weight:700; }
 .product-name-top input:focus,.category-picker input:focus { outline:2px solid #cce0ff; border-color:var(--accent); }
