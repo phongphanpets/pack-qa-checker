@@ -9,8 +9,15 @@ test("web gacha preserves both percentage rates and source grades", () => {
   const parsed = parseExcelPaste(source);
   assert.equal(parsed.valid, true);
   assert.equal(parsed.bundles.length, 1);
-  assert.deepEqual(parsed.bundles[0].items.map(i => [i.chance, i.secret_chance, i.tier]), [[2, 1.25, "Star"], [0.129, 0.125, "UR God"], [0.129, 0.125, "Trainee"]]);
+  assert.deepEqual(parsed.bundles[0].items.map(i => [i.chance, i.secret_chance, i.tier]), [[2, 1.25, "UR(K/F/C)"], [0.129, 0.125, "UR(K/F/C)"], [0.129, 0.125, "Trainee"]]);
   const output = prepareBundleRows(expandBundleRewards(parsed.bundles.map(b => ({ ...b, name: "My Gacha" }))), { mirrorChance: true });
   assert.deepEqual(output.errors, []);
-  assert.deepEqual(output.rows.map(r => [r[5], r[7], r[8]]), [["Star", 2, 1.25], ["UR God", 0.129, 0.125], ["Trainee", 0.129, 0.125]]);
+  assert.deepEqual(output.rows.map(r => [r[5], r[7], r[8]]), [["UR(K/F/C)", 2, 1.25], ["UR(K/F/C)", 0.129, 0.125], ["Trainee", 0.129, 0.125]]);
+});
+
+test("maps gacha grades and preserves already valid import tiers", () => {
+  for (const [grade, expected] of [["R", "R(K/F/C)"], ["SR", "SR(K/F/C)"], ["UR", "UR(K/F/C)"], ["UR(K/F/C)", "UR(K/F/C)"], ["Legendary", "Legendary"], ["", "Trainee"]]) {
+    const parsed = parseExcelPaste(`Item ID\tItem Name\tAmt\tGrade\tChance จริง\tChance ข่าวจ้า\n1333015\tDawn Raven Rexipher\t1\t${grade}\t100%\t100%`);
+    assert.equal(parsed.bundles[0].items[0].tier, expected);
+  }
 });

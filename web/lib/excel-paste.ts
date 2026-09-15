@@ -563,6 +563,15 @@ function parseExcelTsv(input: string): string[][] {
     .filter((parsedRow) => !isMarkdownDivider(parsedRow));
 }
 
+function importTier(value: string | null | undefined): string {
+  const tier = clean(value);
+  if (!tier) return "Trainee";
+  if (/^(UR|UR God|Star)$/i.test(tier)) return "UR(K/F/C)";
+  if (/^SR$/i.test(tier)) return "SR(K/F/C)";
+  if (/^R$/i.test(tier)) return "R(K/F/C)";
+  return tier;
+}
+
 function parseItems(rows: Cell[][], headerRow: number, warnings: ExcelPasteWarning[]): ParsedItem[] {
   const idColumn = findColumn(rows[headerRow], itemIdHeaders);
   const nameColumn = findColumn(rows[headerRow], itemNameHeaders);
@@ -610,7 +619,7 @@ function parseItems(rows: Cell[][], headerRow: number, warnings: ExcelPasteWarni
       amountValue,
       chance,
       chanceValue,
-      ...(tierColumn >= 0 ? { tier: clean(row[tierColumn + offset]?.value) || "Trainee" } : {}),
+      ...(tierColumn >= 0 ? { tier: importTier(row[tierColumn + offset]?.value) } : {}),
       ...(secretChanceColumn >= 0 ? { secretChanceValue: decimal(row[secretChanceColumn + (detected ? detected.itemId.column - idColumn - 1 : 0)]?.value) } : {}),
     });
   }
