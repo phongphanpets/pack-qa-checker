@@ -49,7 +49,8 @@ test("Pages starts with local Bundle Import and exports without a server", async
       const values = [...parser.parseFromString(strings, "application/xml").getElementsByTagName("si")].map(node => node.textContent);
       return Object.fromEntries([...parser.parseFromString(sheet, "application/xml").getElementsByTagName("c")].map(cell => [cell.getAttribute("r"), cell.getAttribute("t") === "s" ? values[Number(cell.textContent)] : cell.textContent]));
     }, { sheet: strFromU8(manualBook["xl/worksheets/sheet1.xml"]), strings: strFromU8(manualBook["xl/sharedStrings.xml"]) });
-    assert.equal(cells.AI1, "Bundle Item 2 คำค้นหา");
+    assert.equal(cells.AH1, "Bundle Item 1 - คำค้นหา");
+    assert.equal(cells.AI1, "Bundle Item 2 - คำค้นหา");
     assert.equal(cells.AH3, "Reward 2");
     assert.equal(cells.AI3, "Bonus 2");
     await page.getByRole("button", { name: "กลับไป Bundle Import", exact: true }).click();

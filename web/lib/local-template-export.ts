@@ -46,7 +46,7 @@ async function templateRows(url: string, rows: Value[][], bundle: boolean) {
     cell.setAttribute("r", "AI1");
     cell.setAttribute("t", "s");
     const value = sheet.createElementNS(ns, "v");
-    value.textContent = String(addString("Bundle Item 2 คำค้นหา"));
+    value.textContent = String(addString("Bundle Item 2 - คำค้นหา"));
     cell.append(value);
     headerRow.append(cell);
     sheet.getElementsByTagNameNS(ns, "dimension")[0]?.setAttribute("ref", `A1:AI${rows.length + 1}`);

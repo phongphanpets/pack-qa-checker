@@ -18,7 +18,7 @@ const headers = [
   "รายละเอียด (ไทย)", "รายละเอียด (อังกฤษ)", "Thumbnail thai", "Banner thai", "Thumbnail en", "Banner en",
   "ลำดับการแสดง", "เวลาเริ่มขาย", "เวลาหยุดขาย", "จำกัดการซื้อต่อ Player", "Server", "Character", "Product",
   "promotion reset count", "last reset", "next reset", "active", "test mode", "hidden", "currency 1", "actual price", "full price",
-  "currency 2", "actual price 2", "full price 2", "currency 3", "actual price 3", "full price 3", "Bundle Item 1 คำค้นหา", "Bundle Item 2 คำค้นหา",
+  "currency 2", "actual price 2", "full price 2", "currency 3", "actual price 3", "full price 3", "Bundle Item 1 - คำค้นหา", "Bundle Item 2 - คำค้นหา",
 ];
 
 export function productImportRows(draft: ProductImportDraft): Array<Array<string | number | null>> {
