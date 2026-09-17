@@ -93,14 +93,14 @@ export async function localBundleExport(bundles: SpecBundle[], catalog: CatalogI
   return new Blob([zipSync(files, { level: 0 })], { type: "application/zip" });
 }
 
-export type LocalProductDraft = { name: string; category: string; displayOrder: string; saleStart: string; saleEnd: string; purchaseLimit: string; currency: string; actualPrice: string; fullPrice: string; bundleNames: string[] };
+export type LocalProductDraft = { name: string; category: string; tags?: string[]; displayOrder: string; saleStart: string; saleEnd: string; purchaseLimit: string; currency: string; actualPrice: string; fullPrice: string; bundleNames: string[] };
 
 export async function localProductExport(input: LocalProductDraft | LocalProductDraft[]) {
   const drafts = Array.isArray(input) ? input : [input];
   if (drafts.some(draft => draft.bundleNames.length > 2)) throw new Error("Product Import รองรับสูงสุด 2 Bundle ต่อ Product");
   if (!drafts.length || drafts.some((draft) => !draft.name.trim() || !draft.bundleNames.length)) throw new Error("กรอกชื่อ Product และเลือก Bundle ก่อน Export");
   const date = (value: string) => value.trim() ? value.trim().replace("T", " ").replace(/(?<=\d{2}:\d{2})$/, ":00") : "";
-  const rows = drafts.map((draft) => ["GAME", draft.name, draft.name, draft.category, "", "", "", "", "", "", "", draft.displayOrder,
+  const rows = drafts.map((draft) => ["GAME", draft.name, draft.name, draft.category, (draft.tags || []).join(", "), "", "", "", "", "", "", draft.displayOrder,
     date(draft.saleStart), date(draft.saleEnd), draft.purchaseLimit, "", "", "", "", "", "",
     "TRUE", "TRUE", "FALSE", draft.currency, draft.actualPrice, draft.fullPrice, "", "", "", "", "", "", draft.bundleNames[0], draft.bundleNames[1] || ""]);
   return new Blob([await templateRows(productTemplateUrl, rows, false)], { type: mime });

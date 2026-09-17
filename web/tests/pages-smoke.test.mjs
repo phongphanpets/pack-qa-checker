@@ -38,6 +38,13 @@ test("Pages starts with local Bundle Import and exports without a server", async
       await page.getByLabel(`Bundle ของ Product ${i}`, { exact: true }).fill(`Reward ${i}\nBonus ${i}`);
     }
     const manualDownload = page.waitForEvent("download");
+    const commonTags = page.getByRole("group", { name: "Tags สำหรับทุกแพ็ก", exact: true });
+    await commonTags.getByLabel("Rank Bronze", { exact: true }).check();
+    await commonTags.getByLabel("Sale", { exact: true }).check();
+    await page.getByRole("button", { name: "ใช้แท็กนี้กับทุกแพ็ก", exact: true }).click();
+    const secondTags = page.getByRole("group", { name: "Tags Product 2", exact: true });
+    await secondTags.getByLabel("Sale", { exact: true }).uncheck();
+    await secondTags.getByLabel("Flashsale", { exact: true }).check();
     await page.getByLabel("Limit Player 1", { exact: true }).fill("3");
     await page.getByLabel("Limit Player 2", { exact: true }).fill("10");
     await page.getByRole("button", { name: "Export Product Import (2)", exact: true }).click();
@@ -54,6 +61,8 @@ test("Pages starts with local Bundle Import and exports without a server", async
     assert.equal(cells.AI3, "Bonus 2");
     assert.equal(cells.O2, "3");
     assert.equal(cells.O3, "10");
+    assert.equal(cells.E2, "Rank Bronze, Sale");
+    assert.equal(cells.E3, "Rank Bronze, Flashsale");
     await page.getByRole("button", { name: "กลับไป Bundle Import", exact: true }).click();
     await textarea.fill("1315002\tGod Fellow Ticket\t30");
     await page.getByText("God Fellow Ticket", { exact: true }).first().waitFor();

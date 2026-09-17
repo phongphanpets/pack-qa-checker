@@ -3,6 +3,7 @@ import { createSimpleXlsx } from "./bundle-import-xlsx.ts";
 export type ProductImportDraft = {
   name: string;
   category: string;
+  tags?: string[];
   displayOrder: string;
   saleStart: string;
   saleEnd: string;
@@ -24,7 +25,7 @@ const headers = [
 export function productImportRows(draft: ProductImportDraft): Array<Array<string | number | null>> {
   if (draft.bundleNames.length > 2) throw new Error("Product Import รองรับสูงสุด 2 Bundle ต่อ Product");
   return [[
-    "GAME", draft.name, draft.name, draft.category, "", "", "", "", "", "", "",
+    "GAME", draft.name, draft.name, draft.category, (draft.tags || []).join(", "), "", "", "", "", "", "",
     draft.displayOrder, draft.saleStart, draft.saleEnd, draft.purchaseLimit, "", "", "", "", "", "",
     "TRUE", "TRUE", "FALSE", draft.currency, draft.actualPrice, draft.fullPrice,
     "", "", "", "", "", "", draft.bundleNames[0] || "", draft.bundleNames[1] || "",
