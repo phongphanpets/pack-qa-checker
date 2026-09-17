@@ -38,12 +38,11 @@ test("Pages starts with local Bundle Import and exports without a server", async
       await page.getByLabel(`Bundle ของ Product ${i}`, { exact: true }).fill(`Reward ${i}\nBonus ${i}`);
     }
     const manualDownload = page.waitForEvent("download");
-    await page.getByLabel("ไม่จำกัด", { exact: true }).check();
-    assert.equal(await page.getByLabel("จำกัดซื้อต่อ Player", { exact: true }).isDisabled(), true);
+    await page.getByLabel("Limit Player 1", { exact: true }).fill("3");
+    await page.getByLabel("Limit Player 2", { exact: true }).fill("10");
     await page.getByRole("button", { name: "Export Product Import (2)", exact: true }).click();
     const manualBook = unzipSync(await readFile(await (await manualDownload).path()));
     assert.match(strFromU8(manualBook["xl/worksheets/sheet1.xml"]), /r="AH3"/);
-    assert.doesNotMatch(strFromU8(manualBook["xl/worksheets/sheet1.xml"]), /r="O[23]"/);
     const cells = await page.evaluate(({ sheet, strings }) => {
       const parser = new DOMParser();
       const values = [...parser.parseFromString(strings, "application/xml").getElementsByTagName("si")].map(node => node.textContent);
@@ -53,6 +52,8 @@ test("Pages starts with local Bundle Import and exports without a server", async
     assert.equal(cells.AI1, "Bundle Item 2 - คำค้นหา");
     assert.equal(cells.AH3, "Reward 2");
     assert.equal(cells.AI3, "Bonus 2");
+    assert.equal(cells.O2, "3");
+    assert.equal(cells.O3, "10");
     await page.getByRole("button", { name: "กลับไป Bundle Import", exact: true }).click();
     await textarea.fill("1315002\tGod Fellow Ticket\t30");
     await page.getByText("God Fellow Ticket", { exact: true }).first().waitFor();
