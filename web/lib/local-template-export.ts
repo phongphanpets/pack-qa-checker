@@ -40,6 +40,17 @@ async function templateRows(url: string, rows: Value[][], bundle: boolean) {
   const header = data?.firstElementChild?.cloneNode(true);
   if (!header) throw new Error("ไม่พบหัวตาราง Import Template");
   data.replaceChildren(header);
+  if (!bundle) {
+    const headerRow = data.firstElementChild!;
+    const cell = sheet.createElementNS(ns, "c");
+    cell.setAttribute("r", "AI1");
+    cell.setAttribute("t", "s");
+    const value = sheet.createElementNS(ns, "v");
+    value.textContent = String(addString("Bundle Item 2 คำค้นหา"));
+    cell.append(value);
+    headerRow.append(cell);
+    sheet.getElementsByTagNameNS(ns, "dimension")[0]?.setAttribute("ref", `A1:AI${rows.length + 1}`);
+  }
   rows.forEach((values, index) => {
     const row = sheet.createElementNS(ns, "row");
     row.setAttribute("r", String(index + 2));
@@ -86,10 +97,11 @@ export type LocalProductDraft = { name: string; category: string; displayOrder: 
 
 export async function localProductExport(input: LocalProductDraft | LocalProductDraft[]) {
   const drafts = Array.isArray(input) ? input : [input];
+  if (drafts.some(draft => draft.bundleNames.length > 2)) throw new Error("Product Import รองรับสูงสุด 2 Bundle ต่อ Product");
   if (!drafts.length || drafts.some((draft) => !draft.name.trim() || !draft.bundleNames.length)) throw new Error("กรอกชื่อ Product และเลือก Bundle ก่อน Export");
   const date = (value: string) => value.trim() ? value.trim().replace("T", " ").replace(/(?<=\d{2}:\d{2})$/, ":00") : "";
   const rows = drafts.map((draft) => ["GAME", draft.name, draft.name, draft.category, "", "", "", "", "", "", "", draft.displayOrder,
     date(draft.saleStart), date(draft.saleEnd), draft.purchaseLimit, "", "", "", "", "", "",
-    "TRUE", "TRUE", "FALSE", draft.currency, draft.actualPrice, draft.fullPrice, "", "", "", "", "", "", draft.bundleNames.join(", ")]);
+    "TRUE", "TRUE", "FALSE", draft.currency, draft.actualPrice, draft.fullPrice, "", "", "", "", "", "", draft.bundleNames[0], draft.bundleNames[1] || ""]);
   return new Blob([await templateRows(productTemplateUrl, rows, false)], { type: mime });
 }

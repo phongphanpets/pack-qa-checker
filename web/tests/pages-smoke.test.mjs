@@ -44,7 +44,14 @@ test("Pages starts with local Bundle Import and exports without a server", async
     const manualBook = unzipSync(await readFile(await (await manualDownload).path()));
     assert.match(strFromU8(manualBook["xl/worksheets/sheet1.xml"]), /r="AH3"/);
     assert.doesNotMatch(strFromU8(manualBook["xl/worksheets/sheet1.xml"]), /r="O[23]"/);
-    assert.match(strFromU8(manualBook["xl/sharedStrings.xml"]), /Reward 2, Bonus 2/);
+    const cells = await page.evaluate(({ sheet, strings }) => {
+      const parser = new DOMParser();
+      const values = [...parser.parseFromString(strings, "application/xml").getElementsByTagName("si")].map(node => node.textContent);
+      return Object.fromEntries([...parser.parseFromString(sheet, "application/xml").getElementsByTagName("c")].map(cell => [cell.getAttribute("r"), cell.getAttribute("t") === "s" ? values[Number(cell.textContent)] : cell.textContent]));
+    }, { sheet: strFromU8(manualBook["xl/worksheets/sheet1.xml"]), strings: strFromU8(manualBook["xl/sharedStrings.xml"]) });
+    assert.equal(cells.AI1, "Bundle Item 2 คำค้นหา");
+    assert.equal(cells.AH3, "Reward 2");
+    assert.equal(cells.AI3, "Bonus 2");
     await page.getByRole("button", { name: "กลับไป Bundle Import", exact: true }).click();
     await textarea.fill("1315002\tGod Fellow Ticket\t30");
     await page.getByText("God Fellow Ticket", { exact: true }).first().waitFor();
