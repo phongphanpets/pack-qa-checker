@@ -339,6 +339,15 @@ test("Markdown escaped currencies and thousands quantities survive", () => {
   assert.deepEqual(result.bundles[0].items.map(item => [item.item_id, item.amount]), [["Gold_Cur", 1500], ["Popo_Fellow_1", 30]]);
 });
 
+test("parses TP currency with and without headers and Markdown escaping", () => {
+  for (const input of ["TP_Cur\tTP\t300", "TP\\_Cur\tTP\t300", "Item ID\tItem Name\tAmt\nTP_Cur\tTP\t300", "| TP\\_Cur | TP | 300 |\n| --- | --- | --- |"] ) {
+    const result = parseExcelPaste(input);
+    assert.equal(result.valid, true, input);
+    assert.equal(result.bundles[0].items[0].item_id, "TP_Cur");
+    assert.equal(result.bundles[0].items[0].amount, 300);
+  }
+});
+
 test("missing ID or truncated headerless quantity blocks partial results", () => {
   for (const input of [
     "Bundle Name\tDemo\n1315001\tFellow Ticket\t2\n52001\tMemory Key",

@@ -13,10 +13,12 @@ export function rewardIdentity(value, name = "") {
   if (Object.hasOwn(wallets, normalized)) return { type: "WALLET_DEBIT", id: wallets[normalized] };
   if (normalized === "player_exp") return { type: "PLAYER_EXPERIENCE", id: "Player Experience - tosm" };
   if (normalized === "currency") {
+    if (/^tp$/i.test(String(name).trim())) return { type: "ITEM", id: "101145" };
     if (/^gold$/i.test(String(name).trim())) return { type: "ITEM", id: "101147" };
     if (/^diamond$/i.test(String(name).trim())) return { type: "ITEM", id: "101146" };
-    throw new Error("Currency ต้องระบุชื่อ Gold หรือ Diamond ให้ชัดเจน");
+    throw new Error("Currency ต้องระบุชื่อ TP, Gold หรือ Diamond ให้ชัดเจน");
   }
+  if (normalized === "tp" || normalized === "tp_cur") return { type: "ITEM", id: "101145" };
   if (normalized === "gold_cur") return { type: "ITEM", id: "101147" };
   if (normalized === "diamond_cur") return { type: "ITEM", id: "101146" };
   if (!id || /^(not found|web only|#value!|#n\/a)$/i.test(id)) throw new Error("Item ID ไม่ครบหรือยังไม่ได้จับคู่");

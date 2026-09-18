@@ -650,7 +650,7 @@ function looksLikeItemId(value: string | null | undefined): boolean {
   if (!normalized) return false;
   return (
     /^\d{4,}$/.test(normalized) ||
-    /^(?:popo_[a-z]+_\d+|gold_cur|diamond_cur|currency|web only)$/i.test(
+    /^(?:popo_[a-z]+_\d+|tp|tp_cur|gold_cur|diamond_cur|currency|web only)$/i.test(
       normalized,
     )
   );
@@ -794,6 +794,7 @@ function decimal(value: string | null | undefined): number | null {
 function clean(value: string | null | undefined): string | null {
   const normalized = value
     ?.replace(/\*\*/g, "")
+    .replace(/\\_/g, "_")
     .replace(/\s+/g, " ")
     .trim();
   return normalized || null;

@@ -30,6 +30,13 @@ test("fixed reward decimals and independent secret chance survive", () => {
 });
 
 test("currency mapping requires identity and wrong totals remain unchanged", () => {
+  for (const id of ["TP", "TP_Cur", "101145"]) {
+    assert.deepEqual(rewardIdentity(id), { type: "ITEM", id: "101145" });
+  }
+  assert.deepEqual(rewardIdentity("Currency", "TP"), { type: "ITEM", id: "101145" });
+  const tp = prepareBundleRows([{ name: "TP reward", items: [{ item_id: "TP", amount: 100 }] }]);
+  assert.deepEqual(tp.errors, []);
+  assert.deepEqual(tp.rows[0].slice(2, 5), ["ITEM", "101145", 100]);
   assert.equal(rewardIdentity("Currency", "Diamond").id, "101146");
   assert.equal(rewardIdentity("Gold_Cur").id, "101147");
   assert.throws(() => rewardIdentity("Currency", "Unknown"));
