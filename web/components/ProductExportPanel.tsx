@@ -19,7 +19,7 @@ function safeFilename(value: string) { return value.trim().replace(/[<>:"/\\|?*]
 function initialPrice(bundle: SpecBundle, fallback: string) { return bundle.gsp_earn != null ? String(bundle.gsp_earn) : bundle.seed_point != null ? String(bundle.seed_point) : fallback; }
 
 const categories = [
-  "📦 แพ็ก & จุ่ม",
+  "Rank Shop - 📦 แพ็ก & จุ่ม",
   "Savior Shop - [ Savior Shop ]",
   "Step up Shop - [ STEP GOD GACHA #1: Penguin Queen Austeja ]",
   "Step up Shop - [ STEP GOD GACHA #2: GOD COIN DC UPTO 70% ]",
