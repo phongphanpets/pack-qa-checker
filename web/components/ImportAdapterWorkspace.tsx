@@ -330,7 +330,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
           <button type="button" className="primary-button" disabled={exporting || exportReview.errors.length > 0} onClick={() => void downloadImport()}>{exporting ? "กำลังสร้างไฟล์..." : exportFormat === "starlight" ? `Export Starlight Shop (${selectedCount})` : `Export Import file (${selectedCount})`}</button>
           {!requestId && <p className="hint">Export ในเบราว์เซอร์นี้ · ไม่ต้องเชื่อม Server หรือบันทึก History</p>}
           {exportError && <p className="hub-error" role="alert">{exportError}</p>}
-          <p className="hint">{exportFormat === "starlight" ? "สร้าง Excel ตาม Starlight Shop format: Battery, Image, Item ID, Item Name, Stackable, Amt, Trade และ Limit" : "สร้าง Excel ตาม Bundle Import format พร้อม Fixed, Random, Coin, GSP และ Player EXP"}</p>
+          <p className="hint">{exportFormat === "starlight" ? "ส่งออกตาม Bundle Import Template: 1 Item ต่อ 1 Fixed Bundle · ข้าม Stackable · เก็บ Battery และ Limit สำหรับ Product ภายหลัง" : "สร้าง Excel ตาม Bundle Import format พร้อม Fixed, Random, Coin, GSP และ Player EXP"}</p>
         </>}
       </aside>
     </section>

@@ -3,7 +3,6 @@ import bundleTemplateUrl from "../templates/bundle-import-template.xlsx?url";
 import productTemplateUrl from "../templates/product-import-template.xlsx?url";
 import { prepareBundleRows } from "./bundle-export-rows.mjs";
 import { prepareStarlightRows } from "./starlight-shop.mjs";
-import { createStarlightShopXlsx } from "./bundle-import-xlsx";
 import type { SpecBundle } from "./website-ocr";
 import type { CatalogItem } from "./item-catalog";
 
@@ -101,12 +100,12 @@ export async function localBundleExport(bundles: SpecBundle[], catalog: CatalogI
 export async function localStarlightShopExport(bundles: SpecBundle[], catalog: CatalogItem[], split: boolean) {
   const review = prepareStarlightRowsTyped(bundles, { catalog });
   if (review.errors.length) throw new Error(review.errors.join("\n"));
-  if (!split) return new Blob([createStarlightShopXlsx(review.rows)], { type: mime });
+  if (!split) return new Blob([await templateRows(bundleTemplateUrl, review.rows, true)], { type: mime });
   const files: Record<string, Uint8Array> = {};
   for (const [index, bundle] of bundles.entries()) {
     const name = String(bundle.name || "bundle").replace(/[<>:"/\\|?*\r\n]/g, "-").slice(0, 120).replace(/[. ]+$/, "");
     const rows = prepareStarlightRowsTyped([bundle], { catalog }).rows;
-    files[`${String(index + 1).padStart(3, "0")}-${name}.xlsx`] = createStarlightShopXlsx(rows);
+    files[`${String(index + 1).padStart(3, "0")}-${name}.xlsx`] = await templateRows(bundleTemplateUrl, rows, true);
   }
   return new Blob([zipSync(files, { level: 0 })], { type: "application/zip" });
 }

@@ -172,7 +172,7 @@ function route_(path, method, body, operationId, email) {
       request.status = body.status;
     }
   } else if (match[2] === 'exports') {
-    if (!['BUNDLE_IMPORT', 'PRODUCT_IMPORT', 'STARLIGHT_SHOP', 'STARLIGHT_SHOP_ZIP'].includes(body.type) || !/\.(zip|xlsx)$/i.test(body.filename || '')) fail_(400, 'ประเภทไฟล์ Export ไม่ถูกต้อง');
+    if (!['BUNDLE_IMPORT', 'BUNDLE_IMPORT_ZIP', 'PRODUCT_IMPORT', 'STARLIGHT_SHOP', 'STARLIGHT_SHOP_ZIP'].includes(body.type) || !/\.(zip|xlsx)$/i.test(body.filename || '')) fail_(400, 'ประเภทไฟล์ Export ไม่ถูกต้อง');
     const file = folder_().createFile(blob_(body.data_url, body.filename));
     request.payload.exports.push({ id: Utilities.getUuid(), filename: body.filename, type: body.type, drive_id: file.getId(), created_at: now });
     request.history.push({ type: 'EXPORTED', at: now, filename: body.filename, by: email });

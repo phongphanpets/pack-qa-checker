@@ -15,7 +15,9 @@ test("splits Starlight Shop rows into one bundle per row", () => {
   assert.equal(parsed.valid, true);
   assert.equal(parsed.bundles.length, 4);
   assert.equal(parsed.bundles[0].name, "Legendary Star Costume");
-  assert.equal(parsed.bundles[0].seed_point, 400);
+  assert.equal(parsed.bundles[0].seed_point, null);
+  assert.equal(parsed.bundles[0].gsp_earn, null);
+  assert.equal(parsed.bundles[0].items[0].battery, 400);
   assert.equal(parsed.bundles[0].purchase_limit, 1);
   assert.equal(parsed.bundles[2].items[0].trade, "Non-Trade");
   assert.equal(parsed.bundles[3].items[0].limit, "No-Limit");
@@ -24,13 +26,14 @@ test("splits Starlight Shop rows into one bundle per row", () => {
 test("auto-detects the Starlight Shop table from the standard parser", () => {
   const parsed = parseExcelPaste(source);
   assert.equal(parsed.bundles.length, 4);
-  assert.equal(parsed.bundles[1].items[0].stackable, "FALSE");
+  assert.equal(parsed.bundles[1].items[0].stackable, undefined);
 });
 
 test("prepares Starlight Shop rows with the requested columns", () => {
   const parsed = parseStarlightShopPaste(source);
   const review = prepareStarlightRows(parsed.bundles);
   assert.deepEqual(review.errors, []);
-  assert.deepEqual(review.rows[0], [400, "", "6012100", "Legendary Star Costume", "not found", 1, "Tradable", 1]);
-  assert.deepEqual(review.rows[3], [1, "", "1311331", "Silver Box 100,000", "FALSE", 1, "Non-Trade", "No-Limit"]);
+  assert.deepEqual(review.rows[0], ["Legendary Star Costume", "FIXED", "ITEM", "6012100", 1, "Trainee", 1, null, null]);
+  assert.deepEqual(review.rows[3], ["Silver Box 100,000", "FIXED", "ITEM", "1311331", 1, "Trainee", 1, null, null]);
+  assert.deepEqual(review.warnings, []);
 });

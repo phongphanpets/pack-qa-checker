@@ -169,12 +169,12 @@ async function handleBundleImport(req, res) {
       for (const [index, bundle] of bundles.entries()) {
         const filename = `${String(index + 1).padStart(3, "0")}-${safeExportFilename(bundle.name).replace(/[. ]+$/, "")}.xlsx`;
         entries.set(filename, format === "starlight"
-          ? buildStarlightShopXlsx([bundle], catalog)
+          ? await buildStarlightShopXlsx([bundle], catalog)
           : await buildBundleImportFromTemplate([bundle], catalog, body.mirrorChance === true));
       }
       file = writeZipEntries(entries);
     } else file = format === "starlight"
-      ? buildStarlightShopXlsx(bundles, catalog)
+      ? await buildStarlightShopXlsx(bundles, catalog)
       : await buildBundleImportFromTemplate(bundles, catalog, body.mirrorChance === true);
     const extension = split ? ".zip" : ".xlsx";
     const filename = safeExportFilename(body.filename || "bundle-import").replace(/\.(?:xlsx|zip)$/i, "") + extension;
@@ -195,10 +195,10 @@ async function handleBundleImport(req, res) {
   }
 }
 
-function buildStarlightShopXlsx(bundles, catalog) {
+async function buildStarlightShopXlsx(bundles, catalog) {
   const review = prepareStarlightRows(bundles, { catalog });
   if (review.errors.length) throw new Error(review.errors.join("\n"));
-  return simpleXlsxBuffer(starlightHeaders, review.rows, "Starlight Shop");
+  return buildBundleImportFromTemplate(bundles.map(bundle => ({ ...bundle, is_gacha: false, items: bundle.items.map(item => ({ ...item, tier: "Trainee" })) })), catalog);
 }
 
 async function handleProductImport(req, res) {

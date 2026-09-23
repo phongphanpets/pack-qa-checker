@@ -142,7 +142,6 @@ function parseStarlightShopRows(rows: Cell[][], originalInput: string): ExcelPas
   const imageColumn = findColumn(header, starlightImageHeaders);
   const idColumn = findColumn(header, itemIdHeaders);
   const nameColumn = findColumn(header, itemNameHeaders);
-  const stackableColumn = findColumn(header, starlightStackableHeaders);
   const amountColumn = findColumn(header, amountHeaders);
   const tradeColumn = findColumn(header, starlightTradeHeaders);
   const limitColumn = findColumn(header, starlightLimitHeaders);
@@ -183,15 +182,14 @@ function parseStarlightShopRows(rows: Cell[][], originalInput: string): ExcelPas
       amount: amountValue,
       battery,
       image: clean(row[imageColumn]?.value),
-      stackable: clean(row[stackableColumn]?.value),
       trade: clean(row[tradeColumn]?.value),
       limit: limitValue === null ? rawLimit : limitValue,
     };
     bundles.push({
       bundle_id: bundleId,
       name: bundleName,
-      seed_point: battery,
-      gsp_earn: battery,
+      seed_point: null,
+      gsp_earn: null,
       purchase_limit: limitValue,
       is_gacha: false,
       is_permanent: false,
@@ -978,7 +976,6 @@ const itemNameHeaders = [
 const amountHeaders = ["amt", "amount", "qty", "quantity", "จำนวน"];
 const starlightBatteryHeaders = ["battery", "แบตเตอรี่"];
 const starlightImageHeaders = ["image", "รูป", "รูปภาพ", "image url", "cdn"];
-const starlightStackableHeaders = ["stackable", "ซ้อนทับได้", "ซ้อนกันได้"];
 const starlightTradeHeaders = ["trade", "tradable", "tradeable", "แลกเปลี่ยน", "ประเภทการแลกเปลี่ยน"];
 const starlightLimitHeaders = ["limit", "จำกัด", "จำนวนจำกัด", "purchase limit"];
 const chanceHeaders = [
