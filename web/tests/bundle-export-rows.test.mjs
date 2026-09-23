@@ -58,12 +58,24 @@ test("currency mapping requires identity and wrong totals remain unchanged", () 
 });
 
 test("wallet names used as Item ID still map to confirmed credit IDs", () => {
-  assert.deepEqual(rewardIdentity("God Coin", "God Coin 1"), {
-    type: "WALLET_CREDIT",
-    id: "a15e0918-7fe8-44af-af85-fd8250a1a78a",
+  const aliases = [
+    ["God Coin", "God Coin 1", "a15e0918-7fe8-44af-af85-fd8250a1a78a"],
+    ["Fellow Coin", "Fellow Coin 1", "a15e08fd-4e26-4256-a1e4-068ef2db9e56"],
+    ["Kupole Coin", "Kupole Coin 1", "a15e08db-9f3f-4bd2-a8bf-d4bb451e192d"],
+  ];
+  for (const [coin, label, id] of aliases) {
+    assert.deepEqual(rewardIdentity(coin, label), { type: "WALLET_CREDIT", id });
+    assert.deepEqual(rewardIdentity("Currency", coin), { type: "WALLET_CREDIT", id });
+  }
+});
+
+test("existing GSP and Player EXP identities remain unchanged", () => {
+  assert.deepEqual(rewardIdentity("GSP"), {
+    type: "WALLET_DEBIT",
+    id: "Golden Seed Point",
   });
-  assert.deepEqual(rewardIdentity("Fellow Coin", "Fellow Coin 1"), {
-    type: "WALLET_CREDIT",
-    id: "a15e08fd-4e26-4256-a1e4-068ef2db9e56",
+  assert.deepEqual(rewardIdentity("PLAYER_EXP"), {
+    type: "PLAYER_EXPERIENCE",
+    id: "Player Experience - tosm",
   });
 });

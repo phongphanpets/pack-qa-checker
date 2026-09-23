@@ -145,3 +145,37 @@ The source spreadsheet still needs a stable template. Start the next implementat
 On Windows, open `เปิด Pack QA.cmd`; it opens the local app at `http://localhost:3000`. Use `ปิด Pack QA.cmd` to close only identified Pack QA services.
 
 The launcher currently relies on local Python/Node tooling (and can use Codex-managed runtime paths). On a new computer, install/restore the required runtime first if the launcher reports it cannot start. Never commit `.runtime/`, `data/`, `evidence/`, `.env`, production tokens, user Excel files, or exported feedback.
+
+## Multi-computer Git handoff (2026-09-23)
+
+- The source branch for the web app is `master`. At this handoff, `master` and
+  `origin/master` were both at `7d6dbf1`. The latest pre-2026-09-23 baseline,
+  `4871b12`, is an ancestor of `master`; today's work is layered on that history.
+- Do not reset `master` to `4871b12`, rewrite its history, or force-push. That
+  would discard later Bundle/Product and Starlight work. The `main` branch has
+  its own 12 commits not present on `master`; inspect and preserve those rather
+  than switching/merging branches automatically.
+- `gh-pages` contains generated GitHub Pages output, not the source branch. On
+  2026-09-23 it was published from `master` repeatedly. The 09:51 deployment
+  (`5b77ef7`) used source `6920f08`; the 11:23 deployment (`0f44fac`) used
+  `0bc42a0`; the latest recorded deployment (`71ca07f`, 13:56) used `7d6dbf1`.
+  Publish only after confirming the deployed source is the intended `master`
+  commit.
+- Currency compatibility regression: `b57431a` changed Popo coin rewards to
+  `WALLET_CREDIT` and the confirmed UUIDs. `0bc42a0` added aliases for the
+  human-readable `God Coin`, `Fellow Coin`, and `Kupole Coin` labels. Preserve
+  both input forms, as well as the existing GSP and Player EXP mappings. The
+  regression tests are in `web/tests/bundle-export-rows.test.mjs`.
+- At handoff, the Currency regression test passed. The app's other runnable
+  tests passed except two Playwright smoke tests because the Playwright package
+  is unavailable in this checkout. A full build/render test is still pending:
+  `npm` is unavailable, and direct Vinext build reports a missing local
+  `web/build/sites-vite-plugin` module. Do not claim these checks passed.
+- Before working on another computer, run `git status --short --branch`,
+  `git fetch origin`, and `git branch -vv`. If the working tree is clean and
+  already on `master`, use `git pull --ff-only origin master`. If the tree is
+  dirty, the branch is `main`, or the pull is rejected, stop and inspect the
+  local commits/diff before integrating anything. Never use `git push --force`.
+  Stage only the intended files, inspect `git diff --cached`, then commit and
+  push `master`. Keep existing `.pages-*`, `.work/`, and local lockfile files
+  untracked unless their owner explicitly asks to include them.
