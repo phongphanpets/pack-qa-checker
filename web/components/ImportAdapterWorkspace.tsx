@@ -25,12 +25,18 @@ type AutoRewards = { title: string; seedPoint: number; playerExp: number; purcha
 
 const emptyItem = (key: number): ManualItem => ({ key, itemId: "", name: "", amount: "1", tier: "Trainee", chance: "" });
 
-function applyBundleNames(result: ExcelPasteResult, names: Record<number, string>, batchName: string): ExcelPasteResult {
+function applyBundleNames(result: ExcelPasteResult, names: Record<number, string>, batchName: string, format: ExportFormat = "bundle"): ExcelPasteResult {
   const base = batchName.trim();
+  const bundles = result.bundles.map((bundle, index) => ({
+    ...bundle,
+    name: names[index]?.trim() || (base
+      ? format === "starlight" ? `${base} ${bundle.items[0]?.name?.trim() || bundle.name}` : `${base} #${index + 1}`
+      : bundle.name === "Untitled Bundle" ? `Bundle #${index + 1}` : bundle.name),
+  }));
   return {
     ...result,
-    bundles: result.bundles.map((bundle, index) => ({ ...bundle, name: names[index]?.trim() || (base ? `${base} #${index + 1}` : bundle.name === "Untitled Bundle" ? `Bundle #${index + 1}` : bundle.name) })),
-    summary: names[0]?.trim() || base || result.summary.name === "Untitled Bundle" ? { ...result.summary, name: names[0]?.trim() || (base ? `${base} #1` : "Bundle #1") } : result.summary,
+    bundles,
+    summary: bundles.length ? { ...result.summary, name: bundles[0].name } : result.summary,
   };
 }
 
@@ -113,10 +119,10 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
   const [exportFormat, setExportFormat] = useState<ExportFormat>("bundle");
 
   const rawParsedPaste = useMemo<ExcelPasteResult>(() => exportFormat === "starlight" ? parseStarlightShopPaste(pasteValue) : parseExcelPaste(pasteValue), [pasteValue, exportFormat]);
-  const parsedPaste = useMemo<ExcelPasteResult>(() => applyBundleNames(rawParsedPaste, bundleNameOverrides, bundleNameBase), [rawParsedPaste, bundleNameOverrides, bundleNameBase]);
+  const parsedPaste = useMemo<ExcelPasteResult>(() => applyBundleNames(rawParsedPaste, bundleNameOverrides, bundleNameBase, exportFormat), [rawParsedPaste, bundleNameOverrides, bundleNameBase, exportFormat]);
   const selectedSheetText = sheetTabs.find((tab) => tab.name === selectedSheetTab)?.text || "";
   const rawParsedSheet = useMemo<ExcelPasteResult>(() => exportFormat === "starlight" ? parseStarlightShopPaste(selectedSheetText) : parseExcelPaste(selectedSheetText), [selectedSheetText, exportFormat]);
-  const parsedSheet = useMemo<ExcelPasteResult>(() => applyBundleNames(rawParsedSheet, bundleNameOverrides, bundleNameBase), [rawParsedSheet, bundleNameOverrides, bundleNameBase]);
+  const parsedSheet = useMemo<ExcelPasteResult>(() => applyBundleNames(rawParsedSheet, bundleNameOverrides, bundleNameBase, exportFormat), [rawParsedSheet, bundleNameOverrides, bundleNameBase, exportFormat]);
   const manual = useMemo(() => manualBundles(bundleName, price, limit, items), [bundleName, price, limit, items]);
   const sourceResult = sourceMode === "paste" ? parsedPaste : sourceMode === "manual" ? null : parsedSheet;
   const parsedBundles = sourceMode === "paste" ? parsedPaste.bundles : sourceMode === "manual" ? manual : parsedSheet.bundles;
@@ -321,7 +327,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
         {!bundles.length ? <EmptyPreview mode={sourceMode} /> : <>
           <div className="preview-summary"><span>{selectedCount} รายการพร้อมส่งต่อ</span><span>{bundles.filter((bundle) => bundle.is_gacha).length} Random</span></div>
           <p className="bundle-name-note">หากยังไม่ตั้งชื่อ ระบบจะใช้ <b>Bundle #1, Bundle #2</b> ตามลำดับ สามารถแก้ชื่อแต่ละรายการได้ก่อน Export</p>
-          {bundles.length > 1 && <label className="bundle-batch-name"><span>ตั้งชื่อ Bundle ทั้งชุด</span><input aria-label="ตั้งชื่อ Bundle ทั้งชุด" value={bundleNameBase} onChange={(event) => setBundleNameBase(event.target.value)} placeholder="เช่น 9.9 เสว : God Coin" /><small>ระบบจะตั้งชื่อเป็น #1, #2, #3 ตามลำดับ และแก้รายชื่อแต่ละ Bundle ด้านล่างได้</small></label>}
+          {bundles.length > 1 && <label className="bundle-batch-name"><span>ตั้งชื่อ Bundle ทั้งชุด</span><input aria-label="ตั้งชื่อ Bundle ทั้งชุด" value={bundleNameBase} onChange={(event) => setBundleNameBase(event.target.value)} placeholder={exportFormat === "starlight" ? "เช่น [SLS]" : "เช่น 9.9 เสว : God Coin"} /><small>{exportFormat === "starlight" ? "นำข้อความไปต่อหน้าชื่อไอเทม เช่น [SLS] Legendary Star Costume และแก้ชื่อราย Bundle ด้านล่างได้" : "ระบบจะตั้งชื่อเป็น #1, #2, #3 ตามลำดับ และแก้รายชื่อแต่ละ Bundle ด้านล่างได้"}</small></label>}
           <div className="bundle-preview-list">{bundles.map((bundle, index) => <BundlePreview bundle={bundle} index={index} nameValue={bundleNameOverrides[index] ?? bundle.name} locked={locked.has(index)} onToggle={() => toggleLock(index)} onNameChange={(name) => setBundleNameOverrides((current) => ({ ...current, [index]: name }))} key={index} />)}</div>
           {exportFormat === "bundle" && <label><input type="checkbox" checked={mirrorChance} onChange={event => setMirrorChance(event.target.checked)} /> ใช้ Chance เดียวกันเมื่อไม่มี Secret Chance</label>}
           <label>รูปแบบไฟล์ <select aria-label="รูปแบบไฟล์ Export" value={splitFiles ? "zip" : "xlsx"} onChange={event => setSplitFiles(event.target.value === "zip")}><option value="zip">แยก Excel ต่อ Bundle รวมเป็น ZIP</option><option value="xlsx">รวมทุก Bundle ใน Excel เดียว</option></select></label>
