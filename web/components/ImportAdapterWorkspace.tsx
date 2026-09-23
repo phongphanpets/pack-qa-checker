@@ -9,6 +9,7 @@ import { expandBundleRewards } from "@/lib/bundle-rewards";
 
 import ItemCatalogCheck from "@/components/ItemCatalogCheck";
 import ProductExportPanel from "@/components/ProductExportPanel";
+import StarlightProductExportPanel from "@/components/StarlightProductExportPanel";
 import RequestHub from "@/components/RequestHub";
 import { parseExcelPaste, parseStarlightShopPaste, type ExcelPasteResult } from "@/lib/excel-paste";
 import { prepareStarlightRows } from "@/lib/starlight-shop.mjs";
@@ -311,7 +312,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
     {requestType === "ITEM_CODE" && itemCodeDetails && <ItemCodeContext details={itemCodeDetails} />}
     <section className="source-panel">
       <div className="section-heading"><div><p className="eyebrow">Step 1</p><h2>เลือกแหล่งข้อมูล</h2></div><p>เลือกเพียงหนึ่งแบบก่อน ระบบจะเปิดช่องที่เกี่ยวข้องให้</p></div>
-      <label className="format-picker"><span>รูปแบบ Import</span><select aria-label="รูปแบบ Import" value={exportFormat} onChange={(event) => { setExportFormat(event.target.value as ExportFormat); setLockState({ signature: "", indexes: new Set() }); }}><option value="bundle">Bundle Import เดิม</option><option value="starlight">Starlight Shop</option></select><small>Starlight Shop จะแยกข้อมูลเป็น 1 Bundle ต่อ 1 แถว และยังไม่สร้าง Product</small></label>
+      <label className="format-picker"><span>รูปแบบ Import</span><select aria-label="รูปแบบ Import" value={exportFormat} onChange={(event) => { setExportFormat(event.target.value as ExportFormat); setLockState({ signature: "", indexes: new Set() }); }}><option value="bundle">Bundle Import เดิม</option><option value="starlight">Starlight Shop</option></select><small>Starlight Shop แยก 1 Bundle ต่อแถว พร้อมสร้าง Product จาก Battery และ Limit</small></label>
       <div className="source-options">
         <SourceOption active={sourceMode === "paste"} title="วางตาราง" detail="รองรับข้อมูลที่ก๊อบจาก Excel หรือ Google Sheet" onClick={() => setSourceMode("paste")} />
         <SourceOption active={false} title="กรอกข้อมูลเอง" detail="กำลังปรับรูปแบบข้อมูลให้ใช้งานได้ครบ" onClick={() => undefined} wip />
@@ -336,11 +337,12 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
           <button type="button" className="primary-button" disabled={exporting || exportReview.errors.length > 0} onClick={() => void downloadImport()}>{exporting ? "กำลังสร้างไฟล์..." : exportFormat === "starlight" ? `Export Starlight Shop (${selectedCount})` : `Export Import file (${selectedCount})`}</button>
           {!requestId && <p className="hint">Export ในเบราว์เซอร์นี้ · ไม่ต้องเชื่อม Server หรือบันทึก History</p>}
           {exportError && <p className="hub-error" role="alert">{exportError}</p>}
-          <p className="hint">{exportFormat === "starlight" ? "ส่งออกตาม Bundle Import Template: 1 Item ต่อ 1 Fixed Bundle · ข้าม Stackable · เก็บ Battery และ Limit สำหรับ Product ภายหลัง" : "สร้าง Excel ตาม Bundle Import format พร้อม Fixed, Random, Coin, GSP และ Player EXP"}</p>
+          <p className="hint">{exportFormat === "starlight" ? "ส่งออกตาม Bundle Import Template: 1 Item ต่อ 1 Fixed Bundle · ข้าม Stackable · ตั้งค่า Product จาก Battery และ Limit ได้ด้านล่าง" : "สร้าง Excel ตาม Bundle Import format พร้อม Fixed, Random, Coin, GSP และ Player EXP"}</p>
         </>}
       </aside>
     </section>
     {showProductExport && exportFormat === "bundle" && selectedCount > 0 && requestType !== "ITEM_CODE" && <ProductExportPanel requestId={requestId} productName={bundleNameBase || exportName || bundleName} bundles={bundles} selectedIndexes={locked} fallbackPrice={price || String(bundles[0]?.seed_point ?? "")} fallbackLimit={limit || String(bundles[0]?.purchase_limit ?? "")} />}
+    {showProductExport && exportFormat === "starlight" && selectedCount > 0 && requestType !== "ITEM_CODE" && <StarlightProductExportPanel bundles={includedBundles} />}
     {bundles.length > 0 && <section className="adapter-validation"><div className="section-heading"><div><p className="eyebrow">Step 3</p><h2>ตรวจ Item ก่อน Export</h2></div><p>เทียบกับ Data กลางเพื่อลด Item ID หรือชื่อที่ไม่ตรง</p></div><ItemCatalogCheck bundles={bundles} onCatalogChange={setCatalog} /></section>}
   </main>;
 }
