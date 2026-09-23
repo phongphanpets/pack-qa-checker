@@ -9,7 +9,7 @@ const campaign = "เสวเสาร์ : Đi Đu Đưa Đi";
 const fixedItems = [
   ["ITEM", 101146, 70],
   ["ITEM", 4235152, 7],
-  ["WALLET_CREDIT", "Golden Seed Point", 590],
+  ["WALLET_DEBIT", "Golden Seed Point", 590],
   ["PLAYER_EXPERIENCE", "Player Experience - tosm", 59],
 ];
 const randomItems = [

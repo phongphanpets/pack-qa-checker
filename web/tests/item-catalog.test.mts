@@ -35,13 +35,17 @@ test("reports unknown IDs, name mismatches, and mapped currency", () => {
         { item_id: "4235100", name: "Belorb Stabilizer", amount: 1, chance: null },
         { item_id: "51201", name: "Wrong item name", amount: 1, chance: null },
         { item_id: "Gold_Cur", name: "Gold", amount: 30, chance: null },
+        { item_id: "Popo_Fellow_1", name: "Fellow Coin 1", amount: 1, chance: null },
         { item_id: "999999", name: "Unknown", amount: 1, chance: null },
       ],
     },
   ], catalog);
 
-  assert.equal(validation.checked, 4);
-  assert.deepEqual(validation.mapped, [{ from: "Gold_Cur", to: "101147", label: "Gold" }]);
+  assert.equal(validation.checked, 5);
+  assert.deepEqual(validation.mapped, [
+    { from: "Gold_Cur", to: "101147", label: "Gold" },
+    { from: "Popo_Fellow_1", to: "WALLET_CREDIT", label: "Fellow Coin" },
+  ]);
   assert.deepEqual(validation.missing, [{ id: "999999", name: "Unknown", bundleName: "Test bundle" }]);
   assert.deepEqual(validation.nameMismatches, [{
     id: "51201",

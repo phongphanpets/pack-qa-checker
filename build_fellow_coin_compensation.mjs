@@ -9,8 +9,8 @@ const quantities = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 28, 26, 24, 23, 22, 20, 1
 const rows = quantities.map((quantity) => [
   `[ชดเชย] Fellow coin - ${quantity} x`,
   "FIXED",
-  "WALLET_DEBIT",
-  "Fellow Coin",
+  "WALLET_CREDIT",
+  "a15e08fd-4e26-4256-a1e4-068ef2db9e56",
   quantity,
   "Trainee",
   1,

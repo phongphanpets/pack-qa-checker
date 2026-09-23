@@ -10,7 +10,7 @@ const fixedItems = [
   ["ITEM", 51201, 5],
   ["ITEM", 45024, 1],
   ["ITEM", 43014, 1],
-  ["WALLET_CREDIT", "Golden Seed Point", 590],
+  ["WALLET_DEBIT", "Golden Seed Point", 590],
   ["PLAYER_EXPERIENCE", "Player Experience - tosm", 59],
 ];
 

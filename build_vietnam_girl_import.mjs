@@ -9,10 +9,10 @@ const bundleName = "เสวเสาร์ : ก็แค่อยากเป
 const items = [
   ["ITEM", 63301001, 1],
   ["ITEM", 63301002, 1],
-  ["WALLET_DEBIT", "Fellow Coin", 1],
-  ["WALLET_DEBIT", "Kupole Coin", 1],
+  ["WALLET_CREDIT", "a15e08fd-4e26-4256-a1e4-068ef2db9e56", 1],
+  ["WALLET_CREDIT", "a15e08db-9f3f-4bd2-a8bf-d4bb451e192d", 1],
   ["ITEM", 1002102, 1],
-  ["WALLET_CREDIT", "Golden Seed Point", 490],
+  ["WALLET_DEBIT", "Golden Seed Point", 490],
   ["PLAYER_EXPERIENCE", "Player Experience - tosm", 49],
 ];
 

@@ -24,9 +24,9 @@ Do not add an unverified Send Immediately column. The user wants immediate deliv
 
 | Source identifier | Item Type | Export Item ID |
 | --- | --- | --- |
-| Popo_God_1 | WALLET_DEBIT | God Coin |
-| Popo_Fellow_1 | WALLET_DEBIT | Fellow Coin |
-| Popo_Kupo_1 | WALLET_DEBIT | Kupole Coin |
+| Popo_God_1 | WALLET_CREDIT | `a15e0918-7fe8-44af-af85-fd8250a1a78a` |
+| Popo_Fellow_1 | WALLET_CREDIT | `a15e08fd-4e26-4256-a1e4-068ef2db9e56` |
+| Popo_Kupo_1 | WALLET_CREDIT | `a15e08db-9f3f-4bd2-a8bf-d4bb451e192d` |
 | Gold_Cur or Currency explicitly named Gold | ITEM | 101147 |
 | Diamond_Cur | ITEM | 101146 |
 | GSP | WALLET_DEBIT | Golden Seed Point |

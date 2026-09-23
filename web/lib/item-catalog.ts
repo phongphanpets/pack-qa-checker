@@ -32,6 +32,11 @@ const walletItems: Record<string, string> = {
   popo_kupo_1: "Kupole Coin",
   web_only: "Royale Chamberkey",
 };
+const walletTypes: Record<string, string> = {
+  popo_god_1: "WALLET_CREDIT",
+  popo_fellow_1: "WALLET_CREDIT",
+  popo_kupo_1: "WALLET_CREDIT",
+};
 const generatedRewardIds = new Set(["gsp", "player_exp"]);
 
 export function parseItemCatalog(input: string): CatalogItem[] {
@@ -89,7 +94,7 @@ export function validateCatalogItems(
       checked += 1;
       const wallet = walletItems[normalize(originalId)];
       if (wallet) {
-        mapped.push({ from: originalId, to: "WALLET_DEBIT", label: wallet });
+        mapped.push({ from: originalId, to: walletTypes[normalize(originalId)] || "WALLET_DEBIT", label: wallet });
         continue;
       }
       const special = specialItems[normalize(originalId)];

@@ -15,9 +15,9 @@ const items = [
   ["ITEM", 1212024, 20],
   ["ITEM", 51502, 30],
   ["ITEM", 10070, 100],
-  ["WALLET_DEBIT", "God Coin", 30],
-  ["WALLET_DEBIT", "Fellow Coin", 30],
-  ["WALLET_DEBIT", "Kupole Coin", 30],
+  ["WALLET_CREDIT", "a15e0918-7fe8-44af-af85-fd8250a1a78a", 30],
+  ["WALLET_CREDIT", "a15e08fd-4e26-4256-a1e4-068ef2db9e56", 30],
+  ["WALLET_CREDIT", "a15e08db-9f3f-4bd2-a8bf-d4bb451e192d", 30],
   ["ITEM", 4235100, 30],
 ];
 

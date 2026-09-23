@@ -16,7 +16,7 @@ test("creates the established bundle import columns and maps special rewards", (
   ] as never;
   const rows = toImportRows(bundles);
 
-  assert.deepEqual(rows[0], ["Example - Fixed", "FIXED", "WALLET_DEBIT", "God Coin", 3, "Trainee", 1, null, null]);
+  assert.deepEqual(rows[0], ["Example - Fixed", "FIXED", "WALLET_CREDIT", "a15e0918-7fe8-44af-af85-fd8250a1a78a", 3, "Trainee", 1, null, null]);
   assert.deepEqual(rows[1], ["Example - Fixed", "FIXED", "WALLET_DEBIT", "Golden Seed Point", 590, "Trainee", 2, null, null]);
   assert.deepEqual(rows[2], ["Example - Fixed", "FIXED", "PLAYER_EXPERIENCE", "Player Experience - tosm", 59, "Trainee", 3, null, null]);
   assert.deepEqual(rows[3], ["Example - Random", "RANDOM", "ITEM", "101146", 10, "Trainee", 1, 0.5, null]);

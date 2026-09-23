@@ -9,8 +9,13 @@ function numeric(value) {
 export function rewardIdentity(value, name = "") {
   const id = String(value ?? "").trim().replace(/\\_/g, "_");
   const normalized = id.toLowerCase().replace(/\s+/g, "_");
-  const wallets = { popo_god_1: "God Coin", popo_fellow_1: "Fellow Coin", popo_kupo_1: "Kupole Coin", gsp: "Golden Seed Point" };
-  if (Object.hasOwn(wallets, normalized)) return { type: "WALLET_DEBIT", id: wallets[normalized] };
+  const wallets = {
+    popo_god_1: { type: "WALLET_CREDIT", id: "a15e0918-7fe8-44af-af85-fd8250a1a78a" },
+    popo_fellow_1: { type: "WALLET_CREDIT", id: "a15e08fd-4e26-4256-a1e4-068ef2db9e56" },
+    popo_kupo_1: { type: "WALLET_CREDIT", id: "a15e08db-9f3f-4bd2-a8bf-d4bb451e192d" },
+  };
+  if (Object.hasOwn(wallets, normalized)) return wallets[normalized];
+  if (normalized === "gsp") return { type: "WALLET_DEBIT", id: "Golden Seed Point" };
   if (normalized === "player_exp") return { type: "PLAYER_EXPERIENCE", id: "Player Experience - tosm" };
   if (normalized === "currency") {
     if (/^tp$/i.test(String(name).trim())) return { type: "ITEM", id: "101145" };

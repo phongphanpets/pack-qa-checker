@@ -13,7 +13,7 @@ const items = [
   ["ITEM", 540021, 1],
   ["ITEM", 540011, 1],
   ["ITEM", 4224500, 999],
-  ["WALLET_CREDIT", "Golden Seed Point", 2490],
+  ["WALLET_DEBIT", "Golden Seed Point", 2490],
   ["PLAYER_EXPERIENCE", "Player Experience - tosm", 249],
 ];
 const rows = items.map(([itemType, itemId, quantity], index) => [

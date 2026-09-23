@@ -100,8 +100,8 @@ test('Aztek Tools: STEP GOD GACHA #3 Fellow Coin matches the request', async ({ 
     await page.getByText('Fellow Coin', { exact: true }).first().waitFor({ state: 'visible' });
 
     const bundleText = normalizeText(await page.locator('main').innerText());
-    expectBundleItem(bundleText, 'Fellow Coin', 'WALLET', expected.quantity);
-    expectBundleItem(bundleText, 'Golden Seed Point', 'WALLET', expected.seedPoint);
+    expectBundleItem(bundleText, 'Fellow Coin', 'WALLET_CREDIT', expected.quantity);
+    expectBundleItem(bundleText, 'Golden Seed Point', 'WALLET_DEBIT', expected.seedPoint);
     expectBundleItem(bundleText, 'Player Experience - tosm', 'PLAYER_EXPERIENCE', expected.experience);
   }
 });

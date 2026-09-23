@@ -39,6 +39,18 @@ test("currency mapping requires identity and wrong totals remain unchanged", () 
   assert.deepEqual(tp.rows[0].slice(2, 5), ["ITEM", "101145", 100]);
   assert.equal(rewardIdentity("Currency", "Diamond").id, "101146");
   assert.equal(rewardIdentity("Gold_Cur").id, "101147");
+  assert.deepEqual(rewardIdentity("Popo_God_1"), {
+    type: "WALLET_CREDIT",
+    id: "a15e0918-7fe8-44af-af85-fd8250a1a78a",
+  });
+  assert.deepEqual(rewardIdentity("Popo_Fellow_1"), {
+    type: "WALLET_CREDIT",
+    id: "a15e08fd-4e26-4256-a1e4-068ef2db9e56",
+  });
+  assert.deepEqual(rewardIdentity("Popo_Kupo_1"), {
+    type: "WALLET_CREDIT",
+    id: "a15e08db-9f3f-4bd2-a8bf-d4bb451e192d",
+  });
   assert.throws(() => rewardIdentity("Currency", "Unknown"));
   const result = prepareBundleRows([{ name: "Random", is_gacha: true, items: [{ item_id: "51201", amount: 1, chance: 99 }] }]);
   assert.equal(result.rows[0][7], 99);
