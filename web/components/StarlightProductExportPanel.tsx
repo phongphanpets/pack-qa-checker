@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { localProductExport, type LocalProductDraft } from "@/lib/local-template-export";
 import type { SpecBundle } from "@/lib/website-ocr";
+import { CategoryPicker } from "@/components/ProductExportPanel";
 
 const categoryName = "Starlight SS2 Shop - [ Battery Shop ]";
 type Edit = Partial<Pick<LocalProductDraft, "name" | "actualPrice" | "purchaseLimit">>;
@@ -57,7 +58,7 @@ export default function StarlightProductExportPanel({ bundles }: { bundles: Spec
       <button type="button" className="quiet-button" onClick={() => setOpen(!open)}>{open ? "ปิดการตั้งค่า Product" : "ตั้งค่า Product Starlight"}</button></div>
     {open && <div className="product-export-body">
       <div className="field-grid product-fields">
-        <Field label="หมวดหมู่ Starlight" value={category} onChange={setCategory} />
+        <CategoryPicker value={category} onChange={setCategory} />
         <Field label="ชื่อสินค้า (อังกฤษ) ทุก Product" value={nameEn} onChange={setNameEn} />
         <Field label="สกุลเงิน (ตรงกับชื่อใน Aztek)" value={currency} onChange={setCurrency} />
         <Field label="เริ่มขายทั้งหมด" value={start} onChange={setStart} placeholder="YYYY-MM-DD HH:mm:ss" />

@@ -26,6 +26,7 @@ const categories = [
   "Step up Shop - [ Fellow ]", "Step up Shop - [ God ]", "Step up Shop - [ Kupole ]",
   "Gacha rate up - Coin - [ God Coin ]", "Gacha rate up - Coin - [ Fellow Coin ]", "Gacha rate up - Coin - [ Kupole Coin ]",
   "Rank Shop - GSP", "Rank Shop - Monthly", "Starlight Station Shop - [ Battery Shop ]",
+  "Starlight SS2 Shop - [ Battery Shop ]",
   "TOSM - Ayothaya - [ Free ]", "TOSM - Ayothaya - [ Paid ]",
   "TOSM - Ayothaya [Little Red Riding Hood] - [ Free ]", "TOSM - Ayothaya [Little Red Riding Hood] - [ Paid ]",
 ];
@@ -111,7 +112,7 @@ export default function ProductExportPanel({ productName, bundles, selectedIndex
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label><span>{label}</span><input value={value} onChange={(event) => onChange(event.target.value)} /></label>; }
 
-function CategoryPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+export function CategoryPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
   const matches = categories.filter((category) => category.toLocaleLowerCase().includes(value.toLocaleLowerCase())).slice(0, 8);
   return <label className="category-picker"><span>หมวดหมู่</span><input aria-label="หมวดหมู่" value={value} placeholder="ค้นหา Category..." onFocus={() => setOpen(true)} onChange={(event) => { onChange(event.target.value); setOpen(true); }} onBlur={() => window.setTimeout(() => setOpen(false), 120)} />{open && <div className="category-options" role="listbox">{matches.length ? matches.map((category) => <button type="button" role="option" aria-selected={category === value} key={category} onMouseDown={(event) => event.preventDefault()} onClick={() => { onChange(category); setOpen(false); }}>{category}</button>) : <span>ไม่พบหมวดหมู่ พิมพ์ชื่อใหม่ได้เลย</span>}</div>}</label>;

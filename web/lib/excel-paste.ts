@@ -115,7 +115,7 @@ function isStarlightShopHeader(rows: Cell[][]) {
     const hasItemId = findColumn(row, itemIdHeaders) >= 0;
     const hasItemName = findColumn(row, itemNameHeaders) >= 0;
     const hasAmount = findColumn(row, amountHeaders) >= 0;
-    return hasBattery && hasItemId && hasItemName && hasAmount && findColumn(row, starlightLimitHeaders) >= 0;
+    return hasBattery && hasItemId && hasItemName && hasAmount;
   });
 }
 
@@ -125,14 +125,14 @@ function parseStarlightShopRows(rows: Cell[][], originalInput: string): ExcelPas
     const hasItemId = findColumn(row, itemIdHeaders) >= 0;
     const hasItemName = findColumn(row, itemNameHeaders) >= 0;
     const hasAmount = findColumn(row, amountHeaders) >= 0;
-    return hasBattery && hasItemId && hasItemName && hasAmount && findColumn(row, starlightLimitHeaders) >= 0;
+    return hasBattery && hasItemId && hasItemName && hasAmount;
   });
   if (headerIndex < 0) {
     return {
       document: { bundles: [] },
       bundles: [],
       valid: false,
-      warnings: [{ code: "UNSUPPORTED_LAYOUT", message: "ไม่พบหัวตาราง Starlight Shop: Battery, Item ID, Item Name, Amt และ Limit" }],
+      warnings: [{ code: "UNSUPPORTED_LAYOUT", message: "ไม่พบหัวตาราง Starlight Shop: Battery, Item ID, Item Name และ Amt" }],
       summary: emptySection().summary,
     };
   }
@@ -149,7 +149,7 @@ function parseStarlightShopRows(rows: Cell[][], originalInput: string): ExcelPas
   const documentBundles: PackFormDocument["bundles"] = [];
   const warnings: ExcelPasteWarning[] = [{
     code: "STARLIGHT_BUNDLE_ROWS",
-    message: "Starlight Shop: แยกข้อมูลเป็น 1 Bundle ต่อ 1 แถวแล้ว (ยังไม่สร้าง Product)",
+    message: "Starlight Shop: แยก 1 Bundle ต่อแถว และใช้ Battery เป็นราคา Product",
   }];
 
   for (const row of rows.slice(headerIndex + 1)) {
@@ -170,7 +170,7 @@ function parseStarlightShopRows(rows: Cell[][], originalInput: string): ExcelPas
       warnings.push({ code: "INVALID_ITEM", message: `แถว ${itemId.row}: Battery ของ ${clean(name.value)} ไม่ใช่ตัวเลขตั้งแต่ 0 ขึ้นไป` });
       continue;
     }
-    if (limitValue === null && !/^no[- ]?limit$/i.test(rawLimit || "")) {
+    if (limitColumn >= 0 && rawLimit && limitValue === null && !/^no[- ]?limit$/i.test(rawLimit)) {
       warnings.push({ code: "INVALID_ITEM", message: `แถว ${itemId.row}: Limit ของ ${clean(name.value)} ไม่ใช่จำนวนเต็มหรือ No-Limit` });
       continue;
     }

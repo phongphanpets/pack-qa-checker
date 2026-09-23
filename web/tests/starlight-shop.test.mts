@@ -3,6 +3,22 @@ import test from "node:test";
 
 import { parseExcelPaste, parseStarlightShopPaste } from "../lib/excel-paste.ts";
 import { prepareStarlightRows } from "../lib/starlight-shop.mjs";
+import { productExportRows } from "../lib/product-export-rows.ts";
+
+test("six-column Markdown retains Battery prices independently of reward quantity", () => {
+  const input = `| **Battery** | **Image** | **Item ID** | **Item Name** | **Stackable** | **Amt** |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 400 | | 6012100 | Legendary Star Costume | not found | 1 |
+| 5 | | 4224500 | Card Fragment | FALSE | 100 |
+| 1 | | 1311331 | Silver Box 100,000 | FALSE | 1 |`;
+  for (const parse of [parseStarlightShopPaste, parseExcelPaste]) {
+    const parsed = parse(input);
+    assert.equal(parsed.valid, true);
+    assert.deepEqual(parsed.bundles.map(bundle => [bundle.items[0].battery, bundle.items[0].amount, bundle.purchase_limit]), [[400, 1, null], [5, 100, null], [1, 1, null]]);
+    const rows = productExportRows(parsed.bundles.map(bundle => ({ name: bundle.name!, nameEn: "Starlight SS2", category: "Starlight SS2 Shop - [ Battery Shop ]", currency: "Battery", actualPrice: String(bundle.items[0].battery), fullPrice: String(bundle.items[0].battery), purchaseLimit: "", displayOrder: "500", saleStart: "", saleEnd: "", bundleNames: [bundle.name!] })));
+    assert.deepEqual(rows.map(row => [row[25], row[26]]), [["400", "400"], ["5", "5"], ["1", "1"]]);
+  }
+});
 
 const source = `Battery\tImage\tItem ID\tItem Name\tStackable\tAmt\tTrade\tLimit
 400\t\t6012100\tLegendary Star Costume\tnot found\t1\tTradable\t1
