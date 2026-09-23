@@ -3750,6 +3750,12 @@ footer {
 @media (max-width:900px) { .product-line { grid-template-columns:28px minmax(160px,1fr) 88px 88px; }.product-line label:nth-of-type(4),.product-line label:nth-of-type(5) { grid-column:2/span 2; }.product-line small { grid-column:2/-1; } }
 @media (max-width:620px) { .product-schedule,.product-schedule > div { display:grid; grid-template-columns:1fr; }.product-order-tools,.product-lines-heading { display:grid; }.product-order-tools .quiet-button { width:100%; }.product-line { grid-template-columns:26px 1fr; }.product-line label { grid-column:2; }.product-line small { grid-column:2; }.product-export-footer { align-items:stretch; } }
 .product-fields { align-items:start; }
+.date-time-control { position:relative; display:flex; min-width:0; }
+.date-time-control > input[type="text"] { min-width:0; flex:1; padding-right:42px; }
+.date-time-picker-button { position:absolute; right:4px; top:50%; display:grid; place-items:center; width:30px; height:30px; padding:0; transform:translateY(-50%); border:0; border-radius:4px; background:transparent; color:#526079; font-size:19px; cursor:pointer; }
+.date-time-picker-button:hover { background:#edf4ff; color:#1769e0; }
+.date-time-picker-button:focus-visible { outline:2px solid #1769e0; }
+.date-time-control .date-time-native-picker { position:fixed; left:-10000px; top:0; width:1px; height:1px; min-height:1px; padding:0; border:0; opacity:0; pointer-events:none; }
 .product-tags-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
 .product-tags { margin:0; padding:0; border:0; min-width:0; }
 .product-tags legend { font-size:12px; color:#526079; margin-bottom:8px; }

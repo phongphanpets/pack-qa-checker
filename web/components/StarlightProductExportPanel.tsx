@@ -4,6 +4,7 @@ import { useState } from "react";
 import { localProductExport, type LocalProductDraft } from "@/lib/local-template-export";
 import type { SpecBundle } from "@/lib/website-ocr";
 import { CategoryPicker } from "@/components/ProductExportPanel";
+import { DateTimeField } from "@/components/DateTimeField";
 
 const categoryName = "Starlight SS2 Shop - [ Battery Shop ]";
 type Edit = Partial<Pick<LocalProductDraft, "name" | "actualPrice" | "purchaseLimit">>;
@@ -61,8 +62,8 @@ export default function StarlightProductExportPanel({ bundles }: { bundles: Spec
         <CategoryPicker value={category} onChange={setCategory} />
         <Field label="ชื่อสินค้า (อังกฤษ) ทุก Product" value={nameEn} onChange={setNameEn} />
         <Field label="สกุลเงิน (ตรงกับชื่อใน Aztek)" value={currency} onChange={setCurrency} />
-        <Field label="เริ่มขายทั้งหมด" value={start} onChange={setStart} placeholder="YYYY-MM-DD HH:mm:ss" />
-        <Field label="หยุดขายทั้งหมด" value={end} onChange={setEnd} placeholder="YYYY-MM-DD HH:mm:ss" />
+        <DateTimeField label="เริ่มขายทั้งหมด" value={start} onChange={setStart} />
+        <DateTimeField label="หยุดขายทั้งหมด" value={end} onChange={setEnd} />
       </div>
       <p>ชื่ออังกฤษในคอลัมน์ C จะเหมือนกันทุกแถว เพื่อใช้ค้นหาทั้งชุดใน Aztek ส่วนคอลัมน์ B เป็นชื่อรายสินค้า</p>
       <div className="product-lines">{rows.map(({ key, draft }, index) => <div className="product-line" key={key}>
