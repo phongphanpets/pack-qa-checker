@@ -99,7 +99,6 @@ export async function localProductExport(input: LocalProductDraft | LocalProduct
   const drafts = Array.isArray(input) ? input : [input];
   if (drafts.some(draft => draft.bundleNames.length > 2)) throw new Error("Product Import รองรับสูงสุด 2 Bundle ต่อ Product");
   if (!drafts.length || drafts.some((draft) => !draft.name.trim() || !draft.bundleNames.length)) throw new Error("กรอกชื่อ Product และเลือก Bundle ก่อน Export");
-  if (drafts.some((draft) => !draft.category.trim())) throw new Error("กรอกหมวดหมู่ก่อน Export Product");
   const date = (value: string) => value.trim() ? value.trim().replace("T", " ").replace(/(?<=\d{2}:\d{2})$/, ":00") : "";
   const rows = drafts.map((draft) => ["GAME", draft.name, draft.name, draft.category, (draft.tags || []).join(", "), "", "", "", "", "", "", draft.displayOrder,
     date(draft.saleStart), date(draft.saleEnd), draft.purchaseLimit, "", "", "", "", "", "",
