@@ -14,7 +14,19 @@ export function rewardIdentity(value, name = "") {
     popo_fellow_1: { type: "WALLET_CREDIT", id: "a15e08fd-4e26-4256-a1e4-068ef2db9e56" },
     popo_kupo_1: { type: "WALLET_CREDIT", id: "a15e08db-9f3f-4bd2-a8bf-d4bb451e192d" },
   };
-  if (Object.hasOwn(wallets, normalized)) return wallets[normalized];
+  const walletAliases = {
+    "god_coin": "popo_god_1",
+    "god_coin_1": "popo_god_1",
+    "fellow_coin": "popo_fellow_1",
+    "fellow_coin_1": "popo_fellow_1",
+    "kupole_coin": "popo_kupo_1",
+    "kupole_coin_1": "popo_kupo_1",
+  };
+  const walletKey = Object.hasOwn(wallets, normalized)
+    ? normalized
+    : walletAliases[normalized]
+      || walletAliases[String(name).trim().toLowerCase().replace(/\s+/g, "_")];
+  if (walletKey) return wallets[walletKey];
   if (normalized === "gsp") return { type: "WALLET_DEBIT", id: "Golden Seed Point" };
   if (normalized === "player_exp") return { type: "PLAYER_EXPERIENCE", id: "Player Experience - tosm" };
   if (normalized === "currency") {

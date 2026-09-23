@@ -56,3 +56,14 @@ test("currency mapping requires identity and wrong totals remain unchanged", () 
   assert.equal(result.rows[0][7], 99);
   assert.equal(result.warnings.length, 1);
 });
+
+test("wallet names used as Item ID still map to confirmed credit IDs", () => {
+  assert.deepEqual(rewardIdentity("God Coin", "God Coin 1"), {
+    type: "WALLET_CREDIT",
+    id: "a15e0918-7fe8-44af-af85-fd8250a1a78a",
+  });
+  assert.deepEqual(rewardIdentity("Fellow Coin", "Fellow Coin 1"), {
+    type: "WALLET_CREDIT",
+    id: "a15e08fd-4e26-4256-a1e4-068ef2db9e56",
+  });
+});
