@@ -88,6 +88,7 @@ export default function ProductExportPanel({ productName, bundles, selectedIndex
   };
 
   async function download() {
+    if (!category.trim()) { setExportError("กรอกหมวดหมู่ก่อน Export Product"); return; }
     if (lines.some(line => line.purchaseLimit.trim() && (!Number.isInteger(Number(line.purchaseLimit)) || Number(line.purchaseLimit) < 1))) { setExportError("Limit / Player ต้องเป็นจำนวนเต็มตั้งแต่ 1 หรือเว้นว่าง"); return; }
     if (lines.some(line => !line.bundleNames.length)) { setExportError("กรอกชื่อ Bundle ที่จะผูกให้ครบทุก Product"); return; }
     if (lines.some(line => !Number.isFinite(Number(line.price)) || Number(line.price) < 0)) { setExportError("ราคาต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป"); return; }
