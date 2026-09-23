@@ -2,8 +2,13 @@ import { unzipSync, zipSync, strFromU8, strToU8 } from "fflate";
 import bundleTemplateUrl from "../templates/bundle-import-template.xlsx?url";
 import productTemplateUrl from "../templates/product-import-template.xlsx?url";
 import { prepareBundleRows } from "./bundle-export-rows.mjs";
+import { prepareStarlightRows } from "./starlight-shop.mjs";
+import { createStarlightShopXlsx } from "./bundle-import-xlsx";
 import type { SpecBundle } from "./website-ocr";
 import type { CatalogItem } from "./item-catalog";
+
+type StarlightReview = { rows: Array<Array<string | number | null>>; errors: string[]; warnings: string[] };
+const prepareStarlightRowsTyped = prepareStarlightRows as unknown as (bundles: SpecBundle[], options: { catalog: CatalogItem[] }) => StarlightReview;
 
 const ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 const mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -89,6 +94,19 @@ export async function localBundleExport(bundles: SpecBundle[], catalog: CatalogI
   for (const [index, bundle] of bundles.entries()) {
     const name = String(bundle.name || "bundle").replace(/[<>:"/\\|?*\r\n]/g, "-").slice(0, 120).replace(/[. ]+$/, "");
     files[`${String(index + 1).padStart(3, "0")}-${name}.xlsx`] = await templateRows(bundleTemplateUrl, prepareBundleRows([bundle], { catalog, mirrorChance }).rows, true);
+  }
+  return new Blob([zipSync(files, { level: 0 })], { type: "application/zip" });
+}
+
+export async function localStarlightShopExport(bundles: SpecBundle[], catalog: CatalogItem[], split: boolean) {
+  const review = prepareStarlightRowsTyped(bundles, { catalog });
+  if (review.errors.length) throw new Error(review.errors.join("\n"));
+  if (!split) return new Blob([createStarlightShopXlsx(review.rows)], { type: mime });
+  const files: Record<string, Uint8Array> = {};
+  for (const [index, bundle] of bundles.entries()) {
+    const name = String(bundle.name || "bundle").replace(/[<>:"/\\|?*\r\n]/g, "-").slice(0, 120).replace(/[. ]+$/, "");
+    const rows = prepareStarlightRowsTyped([bundle], { catalog }).rows;
+    files[`${String(index + 1).padStart(3, "0")}-${name}.xlsx`] = createStarlightShopXlsx(rows);
   }
   return new Blob([zipSync(files, { level: 0 })], { type: "application/zip" });
 }

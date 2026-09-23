@@ -2,7 +2,7 @@ import type { PackFormDocument } from "@/components/PackForm";
 import type { SpecBundle } from "@/lib/website-ocr";
 
 export type ExcelPasteWarning = {
-  code: "GENERATED_BUNDLE_ID" | "DATE_WITHOUT_YEAR" | "UNSUPPORTED_LAYOUT" | "INVALID_ITEM";
+  code: "GENERATED_BUNDLE_ID" | "DATE_WITHOUT_YEAR" | "UNSUPPORTED_LAYOUT" | "INVALID_ITEM" | "STARLIGHT_BUNDLE_ROWS";
   message: string;
 };
 
@@ -60,6 +60,7 @@ type ParsedItem = {
 
 export function parseExcelPaste(input: string): ExcelPasteResult {
   const rows = table(input);
+  if (isStarlightShopHeader(rows)) return parseStarlightShopRows(rows, input);
   const ambiguous = rows.some((row) =>
     row.filter((cell) => itemIdHeaders.map(normalize).includes(normalize(cell.value))).length > 1 ||
     row.filter((cell) => amountHeaders.map(normalize).includes(normalize(cell.value))).length > 1 ||
@@ -95,6 +96,146 @@ export function parseExcelPaste(input: string): ExcelPasteResult {
     valid: sections.length > 0 && sections.every((section) => section.valid),
     warnings: sections.flatMap((section) => section.warnings),
     summary: primary.summary,
+  };
+}
+
+/**
+ * Parse the Starlight Shop request table. Each source row is deliberately
+ * represented as one Bundle so the later Product step can attach one bundle
+ * to one shop product without losing the per-item Battery or Limit values.
+ */
+export function parseStarlightShopPaste(input: string): ExcelPasteResult {
+  const rows = table(input);
+  return parseStarlightShopRows(rows, input);
+}
+
+function isStarlightShopHeader(rows: Cell[][]) {
+  return rows.some((row) => {
+    const hasBattery = findColumn(row, starlightBatteryHeaders) >= 0;
+    const hasItemId = findColumn(row, itemIdHeaders) >= 0;
+    const hasItemName = findColumn(row, itemNameHeaders) >= 0;
+    const hasAmount = findColumn(row, amountHeaders) >= 0;
+    return hasBattery && hasItemId && hasItemName && hasAmount && findColumn(row, starlightLimitHeaders) >= 0;
+  });
+}
+
+function parseStarlightShopRows(rows: Cell[][], originalInput: string): ExcelPasteResult {
+  const headerIndex = rows.findIndex((row) => {
+    const hasBattery = findColumn(row, starlightBatteryHeaders) >= 0;
+    const hasItemId = findColumn(row, itemIdHeaders) >= 0;
+    const hasItemName = findColumn(row, itemNameHeaders) >= 0;
+    const hasAmount = findColumn(row, amountHeaders) >= 0;
+    return hasBattery && hasItemId && hasItemName && hasAmount && findColumn(row, starlightLimitHeaders) >= 0;
+  });
+  if (headerIndex < 0) {
+    return {
+      document: { bundles: [] },
+      bundles: [],
+      valid: false,
+      warnings: [{ code: "UNSUPPORTED_LAYOUT", message: "ไม่พบหัวตาราง Starlight Shop: Battery, Item ID, Item Name, Amt และ Limit" }],
+      summary: emptySection().summary,
+    };
+  }
+
+  const header = rows[headerIndex];
+  const batteryColumn = findColumn(header, starlightBatteryHeaders);
+  const imageColumn = findColumn(header, starlightImageHeaders);
+  const idColumn = findColumn(header, itemIdHeaders);
+  const nameColumn = findColumn(header, itemNameHeaders);
+  const stackableColumn = findColumn(header, starlightStackableHeaders);
+  const amountColumn = findColumn(header, amountHeaders);
+  const tradeColumn = findColumn(header, starlightTradeHeaders);
+  const limitColumn = findColumn(header, starlightLimitHeaders);
+  const bundles: SpecBundle[] = [];
+  const documentBundles: PackFormDocument["bundles"] = [];
+  const warnings: ExcelPasteWarning[] = [{
+    code: "STARLIGHT_BUNDLE_ROWS",
+    message: "Starlight Shop: แยกข้อมูลเป็น 1 Bundle ต่อ 1 แถวแล้ว (ยังไม่สร้าง Product)",
+  }];
+
+  for (const row of rows.slice(headerIndex + 1)) {
+    if (!row.some((cell) => Boolean(clean(cell.value)))) continue;
+    const itemId = row[idColumn];
+    const name = row[nameColumn];
+    const amount = row[amountColumn];
+    const battery = decimal(row[batteryColumn]?.value);
+    const amountValue = integer(amount?.value);
+    const limitCell = row[limitColumn];
+    const limitValue = integer(limitCell?.value);
+    const rawLimit = clean(limitCell?.value);
+    if (!looksLikeItemId(itemId?.value) || !looksLikeItemName(name?.value) || amountValue === null) {
+      warnings.push({ code: "INVALID_ITEM", message: `แถว ${row[0]?.row || "?"}: ต้องมี Item ID, Item Name และ Amt ที่ถูกต้อง` });
+      continue;
+    }
+    if (battery === null || battery < 0) {
+      warnings.push({ code: "INVALID_ITEM", message: `แถว ${itemId.row}: Battery ของ ${clean(name.value)} ไม่ใช่ตัวเลขตั้งแต่ 0 ขึ้นไป` });
+      continue;
+    }
+    if (limitValue === null && !/^no[- ]?limit$/i.test(rawLimit || "")) {
+      warnings.push({ code: "INVALID_ITEM", message: `แถว ${itemId.row}: Limit ของ ${clean(name.value)} ไม่ใช่จำนวนเต็มหรือ No-Limit` });
+      continue;
+    }
+    const bundleName = clean(name.value) || `Starlight Bundle #${bundles.length + 1}`;
+    const bundleId = deterministicBundleId(`${originalInput}\nstarlight\n${itemId.row}`);
+    const item = {
+      item_id: clean(itemId.value),
+      name: clean(name.value),
+      amount: amountValue,
+      battery,
+      image: clean(row[imageColumn]?.value),
+      stackable: clean(row[stackableColumn]?.value),
+      trade: clean(row[tradeColumn]?.value),
+      limit: limitValue === null ? rawLimit : limitValue,
+    };
+    bundles.push({
+      bundle_id: bundleId,
+      name: bundleName,
+      seed_point: battery,
+      gsp_earn: battery,
+      purchase_limit: limitValue,
+      is_gacha: false,
+      is_permanent: false,
+      items: [item],
+    });
+    documentBundles.push({
+      bundle_id: bundleId,
+      spec: {
+        bundle_id: field(itemId, bundleId),
+        name: field(name, bundleName),
+        seed_point: field(row[batteryColumn], battery),
+        purchase_limit: limitCell ? field(limitCell, limitValue === null ? rawLimit : limitValue) : undefined,
+        is_gacha: false,
+        items: [{
+          item_id: field(itemId, item.item_id),
+          name: field(name, item.name),
+          amount: field(amount, amountValue),
+        }],
+      },
+    });
+  }
+
+  const first = bundles[0];
+  const invalid = warnings.some((warning) => warning.code === "INVALID_ITEM");
+  return {
+    document: { bundles: documentBundles },
+    bundles,
+    valid: bundles.length > 0 && !invalid,
+    warnings,
+    summary: first ? {
+      bundleId: first.bundle_id,
+      generatedBundleId: true,
+      name: first.name,
+      itemCount: bundles.reduce((total, bundle) => total + bundle.items.length, 0),
+      seedPoint: first.seed_point,
+      gspEarn: first.gsp_earn,
+      playerExp: null,
+      purchaseLimit: first.purchase_limit,
+      isGacha: false,
+      isPermanent: false,
+      fixedItemCount: bundles.length,
+      randomOutcomeCount: 0,
+      chanceTotal: null,
+    } : emptySection().summary,
   };
 }
 
@@ -835,6 +976,11 @@ const itemNameHeaders = [
   "ชื่อไอเท็ม",
 ];
 const amountHeaders = ["amt", "amount", "qty", "quantity", "จำนวน"];
+const starlightBatteryHeaders = ["battery", "แบตเตอรี่"];
+const starlightImageHeaders = ["image", "รูป", "รูปภาพ", "image url", "cdn"];
+const starlightStackableHeaders = ["stackable", "ซ้อนทับได้", "ซ้อนกันได้"];
+const starlightTradeHeaders = ["trade", "tradable", "tradeable", "แลกเปลี่ยน", "ประเภทการแลกเปลี่ยน"];
+const starlightLimitHeaders = ["limit", "จำกัด", "จำนวนจำกัด", "purchase limit"];
 const chanceHeaders = [
   "chance จริง",
   "chance",

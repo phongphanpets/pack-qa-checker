@@ -16,6 +16,12 @@ export function downloadBundleImportXlsx(bundles: SpecBundle[], filename = "bund
 
 export function createBundleImportXlsx(bundles: SpecBundle[]) { return createSimpleXlsx(bundleImportHeaders, toImportRows(bundles), "Import Bundle_Final Cleaning"); }
 
+export const starlightShopHeaders = ["Battery", "Image", "Item ID", "Item Name", "Stackable", "Amt", "Trade", "Limit"];
+
+export function createStarlightShopXlsx(rows: Array<Array<string | number | null>>) {
+  return createSimpleXlsx(starlightShopHeaders, rows, "Starlight Shop");
+}
+
 export function createSimpleXlsx(headers: string[], rows: Array<Array<string | number | null>>, sheetName: string) {
   return xlsxFile([headers, ...rows], sheetName);
 }

@@ -12,7 +12,7 @@
     "build": "vinext build",
     "start": "vinext start",
     "preview:windows": "node asset-preview-proxy.mjs",
-    "test": "npm run build && node --experimental-strip-types --test tests/website-ocr.test.mts tests/excel-paste.test.mts tests/pilot-session.test.mts tests/pm-review.test.mts && node --test tests/rendered-html.test.mjs",
+    "test": "npm run build && node --experimental-strip-types --test tests/website-ocr.test.mts tests/excel-paste.test.mts tests/starlight-shop.test.mts tests/pilot-session.test.mts tests/pm-review.test.mts && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"
   },

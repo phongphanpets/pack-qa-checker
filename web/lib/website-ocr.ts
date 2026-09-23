@@ -7,6 +7,12 @@ export type SpecItem = {
   chance?: number | null;
   secret_chance?: number | null;
   tier?: string;
+  /** Optional fields used by the Starlight Shop import format. */
+  battery?: number | null;
+  image?: string | null;
+  stackable?: string | null;
+  trade?: string | null;
+  limit?: number | string | null;
 };
 
 export type SpecBundle = {

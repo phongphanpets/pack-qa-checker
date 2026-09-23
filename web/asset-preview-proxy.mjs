@@ -6,6 +6,7 @@ import { randomUUID, timingSafeEqual } from "node:crypto";
 import { inflateRawSync } from "node:zlib";
 import { recordRequestEvent, changeRequestStatus } from "./lib/request-events.mjs";
 import { prepareBundleRows } from "./lib/bundle-export-rows.mjs";
+import { prepareStarlightRows, starlightHeaders } from "./lib/starlight-shop.mjs";
 
 const port = Number(process.env.PORT ?? 3003);
 const upstreamPort = Number(process.env.PACK_QA_UPSTREAM_PORT ?? 3005);
@@ -156,7 +157,10 @@ async function handleBundleImport(req, res) {
     const bundles = Array.isArray(body.bundles) ? body.bundles : [];
     if (!bundles.length) throw new Error("ไม่พบ Bundle สำหรับ Export");
     const catalog = Array.isArray(body.catalog) ? body.catalog : [];
-    const review = prepareBundleRows(bundles, { catalog, mirrorChance: body.mirrorChance === true });
+    const format = body.format === "starlight" ? "starlight" : "bundle";
+    const review = format === "starlight"
+      ? prepareStarlightRows(bundles, { catalog })
+      : prepareBundleRows(bundles, { catalog, mirrorChance: body.mirrorChance === true });
     if (review.errors.length) throw new Error(review.errors.join("\n"));
     const split = body.splitFiles === true;
     let file;
@@ -164,20 +168,24 @@ async function handleBundleImport(req, res) {
       const entries = new Map();
       for (const [index, bundle] of bundles.entries()) {
         const filename = `${String(index + 1).padStart(3, "0")}-${safeExportFilename(bundle.name).replace(/[. ]+$/, "")}.xlsx`;
-        entries.set(filename, await buildBundleImportFromTemplate([bundle], catalog, body.mirrorChance === true));
+        entries.set(filename, format === "starlight"
+          ? buildStarlightShopXlsx([bundle], catalog)
+          : await buildBundleImportFromTemplate([bundle], catalog, body.mirrorChance === true));
       }
       file = writeZipEntries(entries);
-    } else file = await buildBundleImportFromTemplate(bundles, catalog, body.mirrorChance === true);
+    } else file = format === "starlight"
+      ? buildStarlightShopXlsx(bundles, catalog)
+      : await buildBundleImportFromTemplate(bundles, catalog, body.mirrorChance === true);
     const extension = split ? ".zip" : ".xlsx";
     const filename = safeExportFilename(body.filename || "bundle-import").replace(/\.(?:xlsx|zip)$/i, "") + extension;
-    await saveRequestExport(body.requestId, filename, split ? "BUNDLE_IMPORT_ZIP" : "BUNDLE_IMPORT", file, {
+    await saveRequestExport(body.requestId, filename, split ? (format === "starlight" ? "STARLIGHT_SHOP_ZIP" : "BUNDLE_IMPORT_ZIP") : (format === "starlight" ? "STARLIGHT_SHOP" : "BUNDLE_IMPORT"), file, {
       extension,
       bundle_count: bundles.length,
       item_count: bundles.reduce((total, bundle) => total + (Array.isArray(bundle.items) ? bundle.items.length : 0), 0),
     });
     res.writeHead(200, {
       "Content-Type": split ? "application/zip" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="bundle-import${extension}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      "Content-Disposition": `attachment; filename="${format === "starlight" ? "starlight-shop" : "bundle-import"}${extension}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       "Content-Length": file.length,
       "Cache-Control": "no-store",
     });
@@ -185,6 +193,12 @@ async function handleBundleImport(req, res) {
   } catch (error) {
     return json(res, 400, { error: error instanceof Error ? error.message : "สร้าง Bundle Import ไม่สำเร็จ" });
   }
+}
+
+function buildStarlightShopXlsx(bundles, catalog) {
+  const review = prepareStarlightRows(bundles, { catalog });
+  if (review.errors.length) throw new Error(review.errors.join("\n"));
+  return simpleXlsxBuffer(starlightHeaders, review.rows, "Starlight Shop");
 }
 
 async function handleProductImport(req, res) {
@@ -295,6 +309,29 @@ function genericTemplateRowXml(row, values, addString) {
     return `<c r="${ref}" t="s"><v>${addString(value)}</v></c>`;
   }).join("");
   return `<row r="${row}">${cells}</row>`;
+}
+
+function simpleXlsxBuffer(headers, rows, sheetName) {
+  const values = [headers, ...rows];
+  const worksheet = values.map((row, rowIndex) => `<row r="${rowIndex + 1}">${row.map((value, column) => simpleCellXml(column, rowIndex + 1, value)).join("")}</row>`).join("");
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetData>${worksheet}</sheetData></worksheet>`;
+  const workbook = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xmlEscape(sheetName.slice(0, 31))}" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+  const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`;
+  return writeZipEntries(new Map([
+    ["[Content_Types].xml", Buffer.from(contentTypes)],
+    ["_rels/.rels", Buffer.from(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`)],
+    ["xl/workbook.xml", Buffer.from(workbook)],
+    ["xl/_rels/workbook.xml.rels", Buffer.from(rels)],
+    ["xl/worksheets/sheet1.xml", Buffer.from(sheet)],
+  ]));
+}
+
+function simpleCellXml(column, row, value) {
+  if (value === null || value === undefined || value === "") return "";
+  const ref = `${columnName(column)}${row}`;
+  if (typeof value === "number") return `<c r="${ref}"><v>${value}</v></c>`;
+  return `<c r="${ref}" t="inlineStr"><is><t>${xmlEscape(value)}</t></is></c>`;
 }
 
 function sharedStringsXml(original, strings) {
@@ -545,7 +582,7 @@ async function persistRequestExport(requestId, filename, type, contents, details
   if (!/^[A-Z0-9]+$/i.test(requestId)) throw new Error("Invalid request ID");
   const directory = resolve(dataRoot, "request_exports", requestId);
   await mkdir(directory, { recursive: true });
-  const extension = type === "BUNDLE_IMPORT_ZIP" ? ".zip" : ".xlsx";
+  const extension = /_ZIP$/.test(type) ? ".zip" : ".xlsx";
   await writeFile(resolve(directory, `${artifactId}${extension}`), contents);
   const exports = Array.isArray(entry.payload?.exports) ? entry.payload.exports : [];
   exports.unshift({ id: artifactId, filename: safeName, type, created_at: new Date().toISOString(), ...details });
@@ -564,7 +601,7 @@ function sendRequestExport(res, requests, requestId, exportId) {
   const entry = requests.find((item) => item.id === requestId);
   const artifact = Array.isArray(entry?.payload?.exports) ? entry.payload.exports.find((item) => item?.id === exportId) : null;
   if (!artifact) return json(res, 404, { error: "ไม่พบไฟล์ Export" });
-  const extension = artifact.type === "BUNDLE_IMPORT_ZIP" ? ".zip" : ".xlsx";
+  const extension = /_ZIP$/.test(artifact.type || "") ? ".zip" : ".xlsx";
   const filePath = resolve(dataRoot, "request_exports", requestId, `${exportId}${extension}`);
   if (!filePath.startsWith(resolve(dataRoot, "request_exports") + sep) || !existsSync(filePath)) return json(res, 404, { error: "ไม่พบไฟล์ Export" });
   res.writeHead(200, {
