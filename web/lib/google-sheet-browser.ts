@@ -7,7 +7,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = "388166320286-da1hd1d4ihl0st3aj4irmn4smaod9hf4.
 type TokenResponse = { access_token?: string; expires_in?: number; error?: string };
 type TokenClient = { requestAccessToken: (options?: { prompt?: string }) => void };
 type GoogleIdentity = {
-  accounts: { oauth2: { initTokenClient: (options: { client_id: string; scope: string; callback: (response: TokenResponse) => void }) => TokenClient } };
+  accounts: { oauth2: { initTokenClient: (options: { client_id: string; scope: string; callback: (response: TokenResponse) => void; error_callback?: (error: { type: string }) => void }) => TokenClient } };
 };
 
 declare global {
@@ -55,9 +55,13 @@ export function hasGoogleSheetAccess(): boolean {
   return !!accessToken && Date.now() < expiresAt;
 }
 
+export async function ensureGoogleSheetAccess(clientId: string): Promise<void> {
+  if (!hasGoogleSheetAccess()) await connectGoogleSheet(clientId);
+}
+
 export async function connectGoogleSheet(clientId: string): Promise<void> {
   if (!clientId.trim()) throw new Error("ยังไม่ได้ตั้งค่า Google OAuth Client ID สำหรับเว็บไซต์นี้");
-  await loadGoogleIdentity();
+  if (!window.google?.accounts?.oauth2) await loadGoogleIdentity();
   const google = window.google;
   if (!google) throw new Error("เปิด Google Sign-In ไม่สำเร็จ");
   await new Promise<void>((resolve, reject) => {
@@ -73,6 +77,7 @@ export async function connectGoogleSheet(clientId: string): Promise<void> {
         expiresAt = Date.now() + Math.max(0, Number(response.expires_in || 3600) - 60) * 1000;
         resolve();
       },
+      error_callback: (error) => reject(new Error(error.type === "popup_closed" ? "ปิดหน้าต่าง Google ก่อนเชื่อมต่อ กรุณาลองอีกครั้ง" : "เปิดหน้าต่าง Google ไม่สำเร็จ กรุณาอนุญาต Pop-up แล้วลองอีกครั้ง")),
     });
     client.requestAccessToken({ prompt: "" });
   });
