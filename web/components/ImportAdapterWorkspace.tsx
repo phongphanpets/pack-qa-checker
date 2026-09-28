@@ -14,7 +14,8 @@ import RequestHub from "@/components/RequestHub";
 import { parseExcelPaste, parseStarlightShopPaste, type ExcelPasteResult } from "@/lib/excel-paste";
 import { prepareStarlightRows } from "@/lib/starlight-shop.mjs";
 import type { CatalogItem } from "@/lib/item-catalog";
-import { readSpreadsheetTabs, type SpreadsheetTab } from "@/lib/spreadsheet-upload";
+import type { SpreadsheetTab } from "@/lib/spreadsheet-upload";
+import { configuredGoogleClientId, connectGoogleSheet, hasGoogleSheetAccess, listGoogleSheetTabs, preloadGoogleIdentity, readGoogleSheetTab } from "@/lib/google-sheet-browser";
 import type { SpecBundle } from "@/lib/website-ocr";
 
 type SourceMode = "paste" | "manual" | "sheet";
@@ -103,7 +104,9 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
   const [items, setItems] = useState<ManualItem[]>([emptyItem(1)]);
   const [nextItemKey, setNextItemKey] = useState(2);
   const [lockState, setLockState] = useState<{ signature: string; indexes: Set<number> }>({ signature: "", indexes: new Set() });
-  const [sheetFileName, setSheetFileName] = useState("");
+  const [sheetUrl, setSheetUrl] = useState("");
+  const [googleClientId, setGoogleClientId] = useState(configuredGoogleClientId);
+  const [googleConnected, setGoogleConnected] = useState(false);
   const [sheetTabs, setSheetTabs] = useState<SpreadsheetTab[]>([]);
   const [selectedSheetTab, setSelectedSheetTab] = useState("");
   const [loadingSheet, setLoadingSheet] = useState(false);
@@ -118,6 +121,17 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
   const [mirrorChance, setMirrorChance] = useState(true);
   const [splitFiles, setSplitFiles] = useState(true);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("bundle");
+
+  useEffect(() => {
+    if (sourceMode !== "sheet") return;
+    preloadGoogleIdentity();
+    if (!configuredGoogleClientId()) setGoogleClientId(window.localStorage.getItem("google-sheet-client-id") || "");
+  }, [sourceMode]);
+
+  function updateGoogleClientId(value: string) {
+    setGoogleClientId(value);
+    window.localStorage.setItem("google-sheet-client-id", value);
+  }
 
   const rawParsedPaste = useMemo<ExcelPasteResult>(() => exportFormat === "starlight" ? parseStarlightShopPaste(pasteValue) : parseExcelPaste(pasteValue), [pasteValue, exportFormat]);
   const parsedPaste = useMemo<ExcelPasteResult>(() => applyBundleNames(rawParsedPaste, bundleNameOverrides, bundleNameBase, exportFormat), [rawParsedPaste, bundleNameOverrides, bundleNameBase, exportFormat]);
@@ -168,7 +182,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
     setNextItemKey(2);
     setSheetTabs([]);
     setSelectedSheetTab("");
-    setSheetFileName("");
+    setSheetUrl("");
     setSheetError("");
     setExportError("");
     setLockState({ signature: "", indexes: new Set() });
@@ -206,20 +220,38 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
     window.localStorage.removeItem("bundle-import-request");
   }, [screen]);
 
-  async function chooseSpreadsheet(file: File | null) {
-    if (!file) return;
+  async function loadGoogleTabs() {
     setLoadingSheet(true);
     setSheetError("");
-    setSheetFileName(file.name);
     setSheetTabs([]);
     setSelectedSheetTab("");
-    setLocked(new Set());
+    setLockState({ signature: "", indexes: new Set() });
     try {
-      const tabs = await readSpreadsheetTabs(file);
-      setSheetTabs(tabs);
-      setSelectedSheetTab(tabs[0]?.name || "");
+      if (!hasGoogleSheetAccess()) await connectGoogleSheet(googleClientId);
+      setGoogleConnected(true);
+      const tabs = await listGoogleSheetTabs(sheetUrl);
+      const first = tabs[0].name;
+      const text = await readGoogleSheetTab(sheetUrl, first);
+      setSheetTabs(tabs.map((tab) => tab.name === first ? { ...tab, text } : tab));
+      setSelectedSheetTab(first);
     } catch (caught) {
-      setSheetError(caught instanceof Error ? caught.message : "อ่านไฟล์ Spreadsheet ไม่สำเร็จ");
+      setSheetError(caught instanceof Error ? caught.message : "อ่าน Google Sheet ไม่สำเร็จ");
+    } finally {
+      setLoadingSheet(false);
+    }
+  }
+
+  async function selectGoogleTab(name: string) {
+    setSelectedSheetTab(name);
+    setLockState({ signature: "", indexes: new Set() });
+    if (!sheetUrl || sheetTabs.find((tab) => tab.name === name)?.text) return;
+    setLoadingSheet(true);
+    setSheetError("");
+    try {
+      const text = await readGoogleSheetTab(sheetUrl, name);
+      setSheetTabs((current) => current.map((tab) => tab.name === name ? { ...tab, text } : tab));
+    } catch (caught) {
+      setSheetError(caught instanceof Error ? caught.message : "อ่านแท็บไม่สำเร็จ");
     } finally {
       setLoadingSheet(false);
     }
@@ -240,7 +272,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
     setItems([emptyItem(1)]);
     setNextItemKey(2);
     setLocked(new Set());
-    setSheetFileName("");
+    setSheetUrl("");
     setSheetTabs([]);
     setSelectedSheetTab("");
     setSheetError("");
@@ -306,7 +338,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
       <div className="adapter-header-actions"><button type="button" className="quiet-button" onClick={() => setManualProduct(true)}>สร้าง Product เอง</button><span className="adapter-status">Draft</span><button type="button" className="quiet-button" onClick={() => setScreen("hub")}>Request Hub</button></div>
     </header>
     <section className="adapter-intro">
-      <div><p className="eyebrow">Create import batch</p><h1>แปลงตารางเป็น Bundle พร้อม Import</h1><p>วางตาราง ตั้งชื่อแต่ละ Bundle ตรวจรายการ และ Export ได้ทันทีในเบราว์เซอร์นี้</p></div>
+      <div><p className="eyebrow">Create import batch</p><h1>แปลงตารางเป็น Bundle พร้อม Import</h1><p>วางตารางหรือเลือกแท็บจาก Google Sheet ตรวจรายการ และ Export ได้ทันทีในเบราว์เซอร์นี้</p></div>
       <div className="adapter-stats"><span><b>{bundles.length}</b> Bundles</span><span><b>{bundles.reduce((total, bundle) => total + bundle.items.length, 0)}</b> Items</span></div>
     </section>
     {requestType === "ITEM_CODE" && itemCodeDetails && <ItemCodeContext details={itemCodeDetails} />}
@@ -316,15 +348,16 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
       <div className="source-options">
         <SourceOption active={sourceMode === "paste"} title="วางตาราง" detail="รองรับข้อมูลที่ก๊อบจาก Excel หรือ Google Sheet" onClick={() => setSourceMode("paste")} />
         <SourceOption active={false} title="กรอกข้อมูลเอง" detail="กำลังปรับรูปแบบข้อมูลให้ใช้งานได้ครบ" onClick={() => undefined} wip />
-        <SourceOption active={false} title="เลือก Spreadsheet" detail="กำลังปรับการอ่านหลายแท็บให้ใช้งานได้ครบ" onClick={() => undefined} wip />
+        <SourceOption active={sourceMode === "sheet"} title="Google Sheet" detail="วางลิงก์แล้วเลือกแท็บ" onClick={() => { setSourceMode("sheet"); setLockState({ signature: "", indexes: new Set() }); }} />
       </div>
     </section>
     <section className="adapter-layout">
       <div className="adapter-input">
         {sourceMode === "paste" && <PasteInput value={pasteValue} onChange={(value) => { setPasteValue(value); setBundleNameOverrides({}); setBundleNameBase(""); }} parsed={parsedPaste} />}
+        {sourceMode === "sheet" && <SpreadsheetInput url={sheetUrl} onUrlChange={(value) => { setSheetUrl(value); setSheetTabs([]); setSelectedSheetTab(""); setSheetError(""); }} clientId={googleClientId} onClientIdChange={updateGoogleClientId} connected={googleConnected} tabs={sheetTabs} selectedTab={selectedSheetTab} loading={loadingSheet} error={sheetError} parsed={parsedSheet} onLoadUrl={() => void loadGoogleTabs()} onTabChange={(name) => void selectGoogleTab(name)} />}
       </div>
       <aside className="adapter-preview">
-        <div className="preview-heading"><div><p className="eyebrow">Step 2</p><h2>รายการก่อนล็อก</h2></div>{bundles.length > 1 && <button type="button" className="quiet-button" onClick={() => setLocked(new Set(bundles.map((_, index) => index)))}>ล็อกทั้งหมด</button>}</div>
+        <div className="preview-heading"><div><p className="eyebrow">Step 2</p><h2>รายการก่อนล็อก</h2></div></div>
         {!bundles.length ? <EmptyPreview mode={sourceMode} /> : <>
           <div className="preview-summary"><span>{selectedCount} รายการพร้อมส่งต่อ</span><span>{bundles.filter((bundle) => bundle.is_gacha).length} Random</span></div>
           <p className="bundle-name-note">หากยังไม่ตั้งชื่อ ระบบจะใช้ <b>Bundle #1, Bundle #2</b> ตามลำดับ สามารถแก้ชื่อแต่ละรายการได้ก่อน Export</p>
@@ -334,6 +367,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
           <label>รูปแบบไฟล์ <select aria-label="รูปแบบไฟล์ Export" value={splitFiles ? "zip" : "xlsx"} onChange={event => setSplitFiles(event.target.value === "zip")}><option value="zip">แยก Excel ต่อ Bundle รวมเป็น ZIP</option><option value="xlsx">รวมทุก Bundle ใน Excel เดียว</option></select></label>
           {exportReview.errors.map((message, index) => <p className="hub-error" key={`error-${index}`}>{message}</p>)}
           {exportReview.warnings.map((message, index) => <p className="source-warning" key={`warning-${index}`}>{message}</p>)}
+          {bundles.length > 1 && <button type="button" className="quiet-button" disabled={exporting} onClick={() => setLocked(new Set(bundles.map((_, index) => index)))}>ล็อกทั้งหมด</button>}
           <button type="button" className="primary-button" disabled={exporting || exportReview.errors.length > 0} onClick={() => void downloadImport()}>{exporting ? "กำลังสร้างไฟล์..." : exportFormat === "starlight" ? `Export Starlight Shop (${selectedCount})` : `Export Import file (${selectedCount})`}</button>
           {!requestId && <p className="hint">Export ในเบราว์เซอร์นี้ · ไม่ต้องเชื่อม Server หรือบันทึก History</p>}
           {exportError && <p className="hub-error" role="alert">{exportError}</p>}
@@ -355,13 +389,18 @@ function PasteInput({ value, onChange, parsed }: { value: string; onChange: (val
   return <section className="adapter-card"><h2>วางข้อมูลจาก Request</h2><p>ก๊อบตารางทั้งหมดจาก Excel, Google Sheet หรือข้อความใน Request แล้ววางได้เลย ชื่อแต่ละ Bundle จะตั้งได้ในรายการด้านขวา</p><textarea className="request-textarea" value={value} onChange={(event) => onChange(event.target.value)} placeholder={"Item ID\tItem Name\tAmt\n4235100\tBelorb Stabilizer\t1"} spellCheck={false} />{value && <ParseStatus parsed={parsed} />}</section>;
 }
 
-function SpreadsheetInput({ fileName, tabs, selectedTab, loading, error, parsed, rawParsed, bareBundleName, onBareBundleName, onChoose, onTabChange }: { fileName: string; tabs: SpreadsheetTab[]; selectedTab: string; loading: boolean; error: string; parsed: ExcelPasteResult; rawParsed: ExcelPasteResult; bareBundleName: string; onBareBundleName: (value: string) => void; onChoose: (file: File | null) => void; onTabChange: (tab: string) => void }) {
-  return <section className="adapter-card sheet-card"><h2>แนบ Spreadsheet</h2><p>เลือกไฟล์ แล้วเลือกว่าแท็บไหนคือ Request ที่ต้องการแปลง</p>
-    <label className="file-drop"><input type="file" accept=".xlsx,.csv,.txt,.md" onChange={(event) => void onChoose(event.target.files?.[0] || null)} /><b>{loading ? "กำลังอ่านไฟล์..." : fileName || "เลือกไฟล์ Spreadsheet"}</b><span>รองรับ .xlsx, .csv, .txt และ .md</span></label>
-    {error && <p className="source-warning">{error}</p>}
-    {tabs.length > 0 && <div className="sheet-tab-row"><select aria-label="เลือกแท็บ Spreadsheet" value={selectedTab} onChange={(event) => onTabChange(event.target.value)}>{tabs.map((tab) => <option value={tab.name} key={tab.name}>{tab.name}</option>)}</select><small>{tabs.length} แท็บ · เลือกแท็บแล้วรายการจะปรากฏด้านขวา</small></div>}
-    {tabs.length > 0 && <BareBundleName parsed={rawParsed} value={bareBundleName} onChange={onBareBundleName} />}
-    {tabs.length > 0 && <ParseStatus parsed={parsed} />}
+function SpreadsheetInput({ url, onUrlChange, clientId, onClientIdChange, connected, tabs, selectedTab, loading, error, parsed, onLoadUrl, onTabChange }: {
+  url: string; onUrlChange: (value: string) => void; clientId: string; onClientIdChange: (value: string) => void;
+  connected: boolean; tabs: SpreadsheetTab[]; selectedTab: string; loading: boolean; error: string; parsed: ExcelPasteResult;
+  onLoadUrl: () => void; onTabChange: (tab: string) => void;
+}) {
+  return <section className="adapter-card sheet-card"><h2>ดึงข้อมูลจาก Google Sheet</h2><p>ใช้บัญชี Google ที่มีสิทธิ์ในชีต แล้วเลือกแท็บที่ต้องการ</p>
+    {!configuredGoogleClientId() && <label className="sheet-setup"><span>Google OAuth Client ID</span><input aria-label="Google OAuth Client ID" value={clientId} onChange={(event) => onClientIdChange(event.target.value)} placeholder="xxxxxxxx.apps.googleusercontent.com" /><small>ตั้งค่าเพียงครั้งต่อการเปิดหน้าเว็บ ต้องอนุญาตโดเมนนี้ใน Google Cloud ก่อน</small></label>}
+    <div className="sheet-url-row"><input aria-label="ลิงก์ Google Sheet" value={url} onChange={(event) => onUrlChange(event.target.value)} placeholder="https://docs.google.com/spreadsheets/d/..." /><button type="button" className="secondary-button" disabled={loading || !url.trim() || !clientId.trim()} onClick={onLoadUrl}>{loading ? "กำลังอ่าน..." : connected ? "อ่านแท็บ" : "เชื่อม Google และอ่านแท็บ"}</button></div>
+    <p className="hint">ขอสิทธิ์อ่านชีตเท่านั้น · ไม่แก้ข้อมูลต้นทาง</p>
+    {error && <p className="source-warning" role="alert">{error}</p>}
+    {tabs.length > 0 && <div className="sheet-tab-row"><select aria-label="เลือกแท็บ Spreadsheet" value={selectedTab} onChange={(event) => onTabChange(event.target.value)} disabled={loading}>{tabs.map((tab) => <option value={tab.name} key={tab.name}>{tab.name}</option>)}</select><small>{tabs.length} แท็บ · เปลี่ยนแท็บแล้วรายการจะปรากฏด้านขวา</small></div>}
+    {tabs.length > 0 && !loading && <ParseStatus parsed={parsed} />}
   </section>;
 }
 
@@ -383,7 +422,7 @@ function Field({ label, value, onChange, placeholder, wide = false }: { label: s
 }
 
 function EmptyPreview({ mode }: { mode: SourceMode }) {
-  return <div className="empty-preview"><b>{mode === "paste" ? "วางตารางเพื่อเริ่มแปลง" : mode === "manual" ? "เพิ่มชื่อและไอเท็มอย่างน้อยหนึ่งรายการ" : "เลือกไฟล์และแท็บ Spreadsheet"}</b><span>รายการ Bundle ที่ระบบอ่านได้จะแสดงตรงนี้ก่อนล็อก</span></div>;
+  return <div className="empty-preview"><b>{mode === "paste" ? "วางตารางเพื่อเริ่มแปลง" : mode === "manual" ? "เพิ่มชื่อและไอเท็มอย่างน้อยหนึ่งรายการ" : "วางลิงก์แล้วเลือกแท็บ Google Sheet"}</b><span>รายการ Bundle ที่ระบบอ่านได้จะแสดงตรงนี้ก่อนล็อก</span></div>;
 }
 
 function safeFilename(value: string) {

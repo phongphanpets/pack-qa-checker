@@ -17,6 +17,18 @@ npm run build
 
 เปิด `http://localhost:3000` หลังรันคำสั่ง `npm run dev`
 
+## Private Google Sheets in Import Studio
+
+The Google Sheet source in Import Studio reads a sheet through the signed-in user's Google account. It lists tabs and loads the selected tab directly into the existing Bundle/Product preview. It never writes to the source sheet. Access tokens stay in browser memory; only an optional OAuth Client ID is saved locally.
+
+One-time Google Cloud setup:
+
+1. Enable the Google Sheets API and configure the OAuth consent screen. For an external app in testing, add the Google accounts that will use it as test users.
+2. Create an OAuth client of type **Web application**. Add the actual web origin under **Authorized JavaScript origins**, for example `https://phongphanpets.github.io` for GitHub Pages or `http://localhost:3003` for a local preview. Do not include a path such as `/pack-qa-checker/`.
+3. The GitHub Pages OAuth Client ID is configured in the app. Set `VITE_GOOGLE_CLIENT_ID` at build time only to use a different Google Cloud project. A Client ID is public configuration, not a client secret. Never put a client secret or access token in the frontend.
+
+The user must already have Google access to the spreadsheet. `spreadsheets.readonly` allows reading spreadsheet data but not editing it. No Request Hub server is required for this browser-side source. The existing Request Hub Google Sheet route is separate and still expects a link-viewable sheet/server.
+
 ## Tests
 
 ```bash
