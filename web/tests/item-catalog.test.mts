@@ -44,7 +44,7 @@ test("reports unknown IDs, name mismatches, and mapped currency", () => {
   assert.equal(validation.checked, 5);
   assert.deepEqual(validation.mapped, [
     { from: "Gold_Cur", to: "101147", label: "Gold" },
-    { from: "Popo_Fellow_1", to: "WALLET_CREDIT", label: "Fellow Coin" },
+    { from: "Popo_Fellow_1", to: "WALLET_DEBIT", label: "Fellow Coin" },
   ]);
   assert.deepEqual(validation.missing, [{ id: "999999", name: "Unknown", bundleName: "Test bundle" }]);
   assert.deepEqual(validation.nameMismatches, [{

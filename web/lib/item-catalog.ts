@@ -33,9 +33,9 @@ const walletItems: Record<string, string> = {
   web_only: "Royale Chamberkey",
 };
 const walletTypes: Record<string, string> = {
-  popo_god_1: "WALLET_CREDIT",
-  popo_fellow_1: "WALLET_CREDIT",
-  popo_kupo_1: "WALLET_CREDIT",
+  popo_god_1: "WALLET_DEBIT",
+  popo_fellow_1: "WALLET_DEBIT",
+  popo_kupo_1: "WALLET_DEBIT",
 };
 const generatedRewardIds = new Set(["gsp", "player_exp"]);
 

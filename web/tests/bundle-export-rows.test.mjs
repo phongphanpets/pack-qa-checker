@@ -40,15 +40,15 @@ test("currency mapping requires identity and wrong totals remain unchanged", () 
   assert.equal(rewardIdentity("Currency", "Diamond").id, "101146");
   assert.equal(rewardIdentity("Gold_Cur").id, "101147");
   assert.deepEqual(rewardIdentity("Popo_God_1"), {
-    type: "WALLET_CREDIT",
+    type: "WALLET_DEBIT",
     id: "a15e0918-7fe8-44af-af85-fd8250a1a78a",
   });
   assert.deepEqual(rewardIdentity("Popo_Fellow_1"), {
-    type: "WALLET_CREDIT",
+    type: "WALLET_DEBIT",
     id: "a15e08fd-4e26-4256-a1e4-068ef2db9e56",
   });
   assert.deepEqual(rewardIdentity("Popo_Kupo_1"), {
-    type: "WALLET_CREDIT",
+    type: "WALLET_DEBIT",
     id: "a15e08db-9f3f-4bd2-a8bf-d4bb451e192d",
   });
   assert.throws(() => rewardIdentity("Currency", "Unknown"));
@@ -57,15 +57,15 @@ test("currency mapping requires identity and wrong totals remain unchanged", () 
   assert.equal(result.warnings.length, 1);
 });
 
-test("wallet names used as Item ID still map to confirmed credit IDs", () => {
+test("wallet coin aliases export as debit without changing their IDs", () => {
   const aliases = [
     ["God Coin", "God Coin 1", "a15e0918-7fe8-44af-af85-fd8250a1a78a"],
     ["Fellow Coin", "Fellow Coin 1", "a15e08fd-4e26-4256-a1e4-068ef2db9e56"],
     ["Kupole Coin", "Kupole Coin 1", "a15e08db-9f3f-4bd2-a8bf-d4bb451e192d"],
   ];
   for (const [coin, label, id] of aliases) {
-    assert.deepEqual(rewardIdentity(coin, label), { type: "WALLET_CREDIT", id });
-    assert.deepEqual(rewardIdentity("Currency", coin), { type: "WALLET_CREDIT", id });
+    assert.deepEqual(rewardIdentity(coin, label), { type: "WALLET_DEBIT", id });
+    assert.deepEqual(rewardIdentity("Currency", coin), { type: "WALLET_DEBIT", id });
   }
 });
 
