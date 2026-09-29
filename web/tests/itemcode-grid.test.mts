@@ -64,3 +64,21 @@ test("also accepts a single Itemcode day and rejects a malformed reward", () => 
   assert.equal(invalid.valid, false);
   assert.ok(invalid.warnings.some((warning) => warning.code === "INVALID_ITEM"));
 });
+
+test("numbers exported Bundles within each day even when sheet headers start at Code #2", () => {
+  const laterDays = grid.map((row) => [...row]);
+  for (const column of [2, 12]) {
+    laterDays[4][column - 1] = "Code #2";
+    laterDays[11][column - 1] = "Code #3";
+  }
+  laterDays[0][2] = "16 ต.ค.";
+  laterDays[0][12] = "17 ต.ค.";
+
+  const result = parseExcelPaste(laterDays.map((row) => row.join("\t")).join("\n"));
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.bundles.map((bundle) => bundle.name), [
+    "Itemcode 16 ต.ค. #1", "Itemcode 16 ต.ค. #2",
+    "Itemcode 17 ต.ค. #1", "Itemcode 17 ต.ค. #2",
+  ]);
+  assert.equal(prepareBundleRows(result.bundles).errors.length, 0);
+});

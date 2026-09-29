@@ -122,6 +122,7 @@ function parseItemCodeGrid(rows: Cell[][], originalInput: string): ExcelPasteRes
   for (const [dateIndex, dateRow] of dateRows.entries()) {
     const end = dateRows[dateIndex + 1]?.index ?? rows.length;
     for (const { column, date } of dateRow.starts) {
+      let bundleNumber = 0;
       for (let header = dateRow.index + 1; header < end; header += 1) {
         const match = clean(rows[header][column]?.value)?.match(/^code\s*#(\d+)$/i);
         if (!match || normalize(rows[header][column + 2]?.value || "") !== "item id" ||
@@ -142,7 +143,8 @@ function parseItemCodeGrid(rows: Cell[][], originalInput: string): ExcelPasteRes
           items.push({ id, name, amount, quantity });
         }
         if (!items.length) continue;
-        const name = `Itemcode ${date} #${match[1]}`;
+        bundleNumber += 1;
+        const name = `Itemcode ${date} #${bundleNumber}`;
         const bundleId = deterministicBundleId(`${originalInput}\nitemcode-grid\n${dateRow.index}:${column}:${match[1]}`);
         bundles.push({
           bundle_id: bundleId, name, seed_point: null, gsp_earn: null, purchase_limit: null,
