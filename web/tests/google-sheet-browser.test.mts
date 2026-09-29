@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
-import { connectGoogleSheet, ensureGoogleSheetAccess, listGoogleSheetTabs, readGoogleSheetTab, spreadsheetIdFromGoogleUrl } from "../lib/google-sheet-browser.ts";
+import { connectGoogleSheet, ensureGoogleSheetAccess, listGoogleSheetTabs, preferredGoogleSheetTabName, readGoogleSheetTab, spreadsheetIdFromGoogleUrl } from "../lib/google-sheet-browser.ts";
 
 test("accepts only Google Sheets document links", () => {
   assert.equal(spreadsheetIdFromGoogleUrl("https://docs.google.com/spreadsheets/d/abc_123/edit?gid=42"), "abc_123");
@@ -23,13 +23,17 @@ test("reads tab metadata and only the selected tab with read-only scope", async 
   globalThis.fetch = async (input, init) => {
     const url = String(input);
     requests.push({ url, init });
-    if (url.includes("?fields=")) return new Response(JSON.stringify({ sheets: [{ properties: { title: "Main" } }, { properties: { title: "GM's tab" } }] }), { status: 200 });
+    if (url.includes("?fields=")) return new Response(JSON.stringify({ sheets: [{ properties: { sheetId: 0, title: "Main" } }, { properties: { sheetId: 664905947, title: "GM's tab" } }] }), { status: 200 });
     return new Response(JSON.stringify({ values: [["Item ID", "Amt"], ["1315002", 30]] }), { status: 200 });
   };
   try {
     await connectGoogleSheet("test-client-id");
     const tabs = await listGoogleSheetTabs("https://docs.google.com/spreadsheets/d/test-sheet/edit");
     assert.deepEqual(tabs.map((tab) => tab.name), ["Main", "GM's tab"]);
+    assert.equal(preferredGoogleSheetTabName(tabs, "https://docs.google.com/spreadsheets/d/test-sheet/edit?gid=664905947#gid=664905947"), "GM's tab");
+    assert.equal(preferredGoogleSheetTabName(tabs, "https://docs.google.com/spreadsheets/d/test-sheet/edit#gid=664905947"), "GM's tab");
+    assert.equal(preferredGoogleSheetTabName(tabs, "https://docs.google.com/spreadsheets/d/test-sheet/edit"), "Main");
+    assert.throws(() => preferredGoogleSheetTabName(tabs, "https://docs.google.com/spreadsheets/d/test-sheet/edit?gid=999"), /ไม่พบในชีตนี้/);
     assert.equal(await readGoogleSheetTab("https://docs.google.com/spreadsheets/d/test-sheet/edit", "GM's tab"), "Item ID\tAmt\n1315002\t30");
     assert.deepEqual(scope, ["https://www.googleapis.com/auth/spreadsheets.readonly"]);
     assert.deepEqual(prompts, [""]);

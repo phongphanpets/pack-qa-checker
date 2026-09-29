@@ -14,8 +14,7 @@ import RequestHub from "@/components/RequestHub";
 import { parseExcelPaste, parseStarlightShopPaste, type ExcelPasteResult } from "@/lib/excel-paste";
 import { prepareStarlightRows } from "@/lib/starlight-shop.mjs";
 import type { CatalogItem } from "@/lib/item-catalog";
-import type { SpreadsheetTab } from "@/lib/spreadsheet-upload";
-import { configuredGoogleClientId, ensureGoogleSheetAccess, listGoogleSheetTabs, preloadGoogleIdentity, readGoogleSheetTab } from "@/lib/google-sheet-browser";
+import { configuredGoogleClientId, ensureGoogleSheetAccess, listGoogleSheetTabs, preferredGoogleSheetTabName, preloadGoogleIdentity, readGoogleSheetTab, type GoogleSpreadsheetTab } from "@/lib/google-sheet-browser";
 import type { SpecBundle } from "@/lib/website-ocr";
 
 type SourceMode = "paste" | "manual" | "sheet";
@@ -107,7 +106,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
   const [sheetUrl, setSheetUrl] = useState("");
   const [googleClientId, setGoogleClientId] = useState(configuredGoogleClientId);
   const [googleConnected, setGoogleConnected] = useState(false);
-  const [sheetTabs, setSheetTabs] = useState<SpreadsheetTab[]>([]);
+  const [sheetTabs, setSheetTabs] = useState<GoogleSpreadsheetTab[]>([]);
   const [selectedSheetTab, setSelectedSheetTab] = useState("");
   const [loadingSheet, setLoadingSheet] = useState(false);
   const [sheetError, setSheetError] = useState("");
@@ -230,7 +229,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
       await ensureGoogleSheetAccess(googleClientId);
       setGoogleConnected(true);
       const tabs = await listGoogleSheetTabs(sheetUrl);
-      const first = tabs[0].name;
+      const first = preferredGoogleSheetTabName(tabs, sheetUrl);
       const text = await readGoogleSheetTab(sheetUrl, first);
       setSheetTabs(tabs.map((tab) => tab.name === first ? { ...tab, text } : tab));
       setSelectedSheetTab(first);
@@ -392,13 +391,13 @@ function PasteInput({ value, onChange, parsed }: { value: string; onChange: (val
 
 function SpreadsheetInput({ url, onUrlChange, clientId, onClientIdChange, connected, tabs, selectedTab, loading, error, parsed, onLoadUrl, onTabChange }: {
   url: string; onUrlChange: (value: string) => void; clientId: string; onClientIdChange: (value: string) => void;
-  connected: boolean; tabs: SpreadsheetTab[]; selectedTab: string; loading: boolean; error: string; parsed: ExcelPasteResult;
+  connected: boolean; tabs: GoogleSpreadsheetTab[]; selectedTab: string; loading: boolean; error: string; parsed: ExcelPasteResult;
   onLoadUrl: () => void; onTabChange: (tab: string) => void;
 }) {
   return <section className="adapter-card sheet-card"><h2>ดึงข้อมูลจาก Google Sheet</h2><p>ใช้บัญชี Google ที่มีสิทธิ์ในชีต แล้วเลือกแท็บที่ต้องการ</p>
     {!configuredGoogleClientId() && <label className="sheet-setup"><span>Google OAuth Client ID</span><input aria-label="Google OAuth Client ID" value={clientId} onChange={(event) => onClientIdChange(event.target.value)} placeholder="xxxxxxxx.apps.googleusercontent.com" /><small>ตั้งค่าเพียงครั้งต่อการเปิดหน้าเว็บ ต้องอนุญาตโดเมนนี้ใน Google Cloud ก่อน</small></label>}
     <div className="sheet-url-row"><input aria-label="ลิงก์ Google Sheet" value={url} onChange={(event) => onUrlChange(event.target.value)} placeholder="https://docs.google.com/spreadsheets/d/..." /><button type="button" className="secondary-button" disabled={loading || !url.trim() || !clientId.trim()} onClick={onLoadUrl}>{loading ? "กำลังอ่าน..." : connected ? "อ่านแท็บด้วยสิทธิ์เดิม" : "เชื่อม Google และอ่านแท็บ"}</button></div>
-    <p className="hint">Google จำสิทธิ์ที่เคยอนุญาตไว้ · อาจต้องเลือกบัญชีใหม่เมื่อ Token หมดอายุ · อ่านอย่างเดียว</p>
+    <p className="hint">ลิงก์ที่มี gid จะเปิดแท็บนั้นก่อน · Google จำสิทธิ์เดิมไว้ · อ่านอย่างเดียว</p>
     {error && <p className="source-warning" role="alert">{error}</p>}
     {tabs.length > 0 && <div className="sheet-tab-row"><select aria-label="เลือกแท็บ Spreadsheet" value={selectedTab} onChange={(event) => onTabChange(event.target.value)} disabled={loading}>{tabs.map((tab) => <option value={tab.name} key={tab.name}>{tab.name}</option>)}</select><small>{tabs.length} แท็บ · เปลี่ยนแท็บแล้วรายการจะปรากฏด้านขวา</small></div>}
     {tabs.length > 0 && !loading && <ParseStatus parsed={parsed} />}

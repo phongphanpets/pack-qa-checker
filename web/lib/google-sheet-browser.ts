@@ -1,5 +1,7 @@
 import type { SpreadsheetTab } from "./spreadsheet-upload";
 
+export type GoogleSpreadsheetTab = SpreadsheetTab & { sheetId: number };
+
 const SHEETS_READ_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly";
 const GOOGLE_SCRIPT_URL = "https://accounts.google.com/gsi/client";
 const DEFAULT_GOOGLE_CLIENT_ID = "388166320286-da1hd1d4ihl0st3aj4irmn4smaod9hf4.apps.googleusercontent.com";
@@ -96,13 +98,25 @@ async function sheetsGet(path: string): Promise<unknown> {
   return response.json();
 }
 
-export async function listGoogleSheetTabs(url: string): Promise<SpreadsheetTab[]> {
+export async function listGoogleSheetTabs(url: string): Promise<GoogleSpreadsheetTab[]> {
   const id = spreadsheetIdFromGoogleUrl(url);
   if (!id) throw new Error("วางลิงก์ Google Sheet ที่ถูกต้อง");
-  const result = await sheetsGet(`${id}?fields=sheets(properties(title))`) as { sheets?: Array<{ properties?: { title?: string } }> };
-  const tabs = (result.sheets || []).flatMap((sheet) => sheet.properties?.title ? [{ name: sheet.properties.title, text: "" }] : []);
+  const result = await sheetsGet(`${id}?fields=sheets(properties(sheetId,title))`) as { sheets?: Array<{ properties?: { sheetId?: number; title?: string } }> };
+  const tabs = (result.sheets || []).flatMap((sheet) =>
+    sheet.properties?.title && typeof sheet.properties.sheetId === "number"
+      ? [{ sheetId: sheet.properties.sheetId, name: sheet.properties.title, text: "" }]
+      : []);
   if (!tabs.length) throw new Error("ไม่พบแท็บใน Google Sheet นี้");
   return tabs;
+}
+
+export function preferredGoogleSheetTabName(tabs: GoogleSpreadsheetTab[], url: string): string {
+  const parsed = new URL(url.trim());
+  const gid = parsed.searchParams.get("gid") || new URLSearchParams(parsed.hash.slice(1)).get("gid");
+  if (!gid) return tabs[0]?.name || "";
+  const tab = tabs.find((entry) => String(entry.sheetId) === gid);
+  if (!tab) throw new Error(`ลิงก์ชี้ไปแท็บ gid=${gid} ที่ไม่พบในชีตนี้ กรุณาตรวจลิงก์แล้วลองใหม่`);
+  return tab.name;
 }
 
 export async function readGoogleSheetTab(url: string, tabName: string): Promise<string> {
