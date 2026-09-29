@@ -2,13 +2,13 @@
 /* The line editor intentionally synchronizes initial values when the selected bundles change. */
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { localProductExport, type LocalProductDraft } from "@/lib/local-template-export";
 import type { SpecBundle } from "@/lib/website-ocr";
 import { groupProductBundles } from "@/lib/product-groups";
 import { DateTimeField } from "@/components/DateTimeField";
 
-type Props = { requestId: string; productName: string; bundles: SpecBundle[]; selectedIndexes: Set<number>; fallbackPrice: string; fallbackLimit: string; manual?: boolean };
+type Props = { requestId: string; sourceKey?: string; productName: string; bundles: SpecBundle[]; selectedIndexes: Set<number>; fallbackPrice: string; fallbackLimit: string; manual?: boolean };
 type ProductLine = { key: string; bundleName: string; bundleNames: string[]; name: string; price: string; tags: string[]; purchaseLimit: string; displayOrder: string; saleStart: string; saleEnd: string };
 
 function dateValue(date: Date) {
@@ -32,7 +32,7 @@ const categories = [
   "TOSM - Ayothaya [Little Red Riding Hood] - [ Free ]", "TOSM - Ayothaya [Little Red Riding Hood] - [ Paid ]",
 ];
 
-export default function ProductExportPanel({ productName, bundles, selectedIndexes, fallbackPrice, fallbackLimit, manual = false }: Props) {
+export default function ProductExportPanel({ sourceKey, productName, bundles, selectedIndexes, fallbackPrice, fallbackLimit, manual = false }: Props) {
   const [open, setOpen] = useState(manual);
   const [count, setCount] = useState("1");
   const [commonTags, setCommonTags] = useState<string[]>([]);
@@ -44,14 +44,17 @@ export default function ProductExportPanel({ productName, bundles, selectedIndex
   const [lines, setLines] = useState<ProductLine[]>(() => manual ? [{ key: "manual:1", bundleName: "", bundleNames: [], name: "", price: "", tags: [], purchaseLimit: "1", displayOrder: "500", saleStart: commonStart, saleEnd: commonEnd }] : []);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+  const previousSourceKey = useRef(sourceKey);
   const selectedBundles = useMemo(() => bundles.filter((_, index) => selectedIndexes.size === 0 || selectedIndexes.has(index)), [bundles, selectedIndexes]);
   const groups = groupProductBundles(selectedBundles);
   const signature = JSON.stringify(groups);
 
   useEffect(() => {
     if (manual) return;
+    const sourceChanged = previousSourceKey.current !== sourceKey;
+    previousSourceKey.current = sourceKey;
     setLines((current) => groups.map(({ key, bundle, bundleNames }, index) => {
-      const previous = current.find((line) => line.key === key);
+      const previous = sourceChanged ? undefined : current.find((line) => line.key === key);
       const links = { bundleName: bundleNames.join(", "), bundleNames };
       return previous ? { ...previous, ...links } : {
         key,
@@ -67,7 +70,7 @@ export default function ProductExportPanel({ productName, bundles, selectedIndex
     }));
   // The signature is deliberately stable: typing in a line must not reset that line.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature, fallbackPrice, productName, manual]);
+  }, [signature, sourceKey, fallbackPrice, productName, manual]);
 
   const updateLine = (key: string, field: keyof Omit<ProductLine, "key" | "bundleName">, value: string) => setLines((current) => current.map((line) => line.key === key ? { ...line, [field]: value } : line));
   const applyDates = () => setLines((current) => current.map((line) => ({ ...line, saleStart: commonStart, saleEnd: commonEnd })));

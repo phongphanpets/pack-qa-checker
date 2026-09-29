@@ -135,6 +135,9 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
   const rawParsedPaste = useMemo<ExcelPasteResult>(() => exportFormat === "starlight" ? parseStarlightShopPaste(pasteValue) : parseExcelPaste(pasteValue), [pasteValue, exportFormat]);
   const parsedPaste = useMemo<ExcelPasteResult>(() => applyBundleNames(rawParsedPaste, bundleNameOverrides, bundleNameBase, exportFormat), [rawParsedPaste, bundleNameOverrides, bundleNameBase, exportFormat]);
   const selectedSheetText = sheetTabs.find((tab) => tab.name === selectedSheetTab)?.text || "";
+  const productSourceKey = sourceMode === "sheet"
+    ? JSON.stringify([sourceMode, sheetUrl, selectedSheetTab, selectedSheetText])
+    : sourceMode === "paste" ? JSON.stringify([sourceMode, pasteValue]) : sourceMode;
   const rawParsedSheet = useMemo<ExcelPasteResult>(() => exportFormat === "starlight" ? parseStarlightShopPaste(selectedSheetText) : parseExcelPaste(selectedSheetText), [selectedSheetText, exportFormat]);
   const parsedSheet = useMemo<ExcelPasteResult>(() => applyBundleNames(rawParsedSheet, bundleNameOverrides, bundleNameBase, exportFormat), [rawParsedSheet, bundleNameOverrides, bundleNameBase, exportFormat]);
   const manual = useMemo(() => manualBundles(bundleName, price, limit, items), [bundleName, price, limit, items]);
@@ -224,6 +227,8 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
     setSheetError("");
     setSheetTabs([]);
     setSelectedSheetTab("");
+    setBundleNameOverrides({});
+    setBundleNameBase("");
     setLockState({ signature: "", indexes: new Set() });
     try {
       await ensureGoogleSheetAccess(googleClientId);
@@ -242,6 +247,8 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
 
   async function selectGoogleTab(name: string) {
     setSelectedSheetTab(name);
+    setBundleNameOverrides({});
+    setBundleNameBase("");
     setLockState({ signature: "", indexes: new Set() });
     if (!sheetUrl || sheetTabs.find((tab) => tab.name === name)?.text) return;
     setLoadingSheet(true);
@@ -354,7 +361,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
     <section className="adapter-layout">
       <div className="adapter-input">
         {sourceMode === "paste" && <PasteInput value={pasteValue} onChange={(value) => { setPasteValue(value); setBundleNameOverrides({}); setBundleNameBase(""); }} parsed={parsedPaste} />}
-        {sourceMode === "sheet" && <SpreadsheetInput url={sheetUrl} onUrlChange={(value) => { setSheetUrl(value); setSheetTabs([]); setSelectedSheetTab(""); setSheetError(""); }} clientId={googleClientId} onClientIdChange={updateGoogleClientId} connected={googleConnected} tabs={sheetTabs} selectedTab={selectedSheetTab} loading={loadingSheet} error={sheetError} parsed={parsedSheet} onLoadUrl={() => void loadGoogleTabs()} onTabChange={(name) => void selectGoogleTab(name)} />}
+        {sourceMode === "sheet" && <SpreadsheetInput url={sheetUrl} onUrlChange={(value) => { setSheetUrl(value); setSheetTabs([]); setSelectedSheetTab(""); setSheetError(""); setBundleNameOverrides({}); setBundleNameBase(""); }} clientId={googleClientId} onClientIdChange={updateGoogleClientId} connected={googleConnected} tabs={sheetTabs} selectedTab={selectedSheetTab} loading={loadingSheet} error={sheetError} parsed={parsedSheet} onLoadUrl={() => void loadGoogleTabs()} onTabChange={(name) => void selectGoogleTab(name)} />}
       </div>
       <aside className="adapter-preview">
         <div className="preview-heading"><div><p className="eyebrow">Step 2</p><h2>รายการก่อนล็อก</h2></div></div>
@@ -375,7 +382,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
         </>}
       </aside>
     </section>
-    {showProductExport && exportFormat === "bundle" && selectedCount > 0 && requestType !== "ITEM_CODE" && <ProductExportPanel requestId={requestId} productName={bundleNameBase || exportName || bundleName} bundles={bundles} selectedIndexes={locked} fallbackPrice={price || String(bundles[0]?.seed_point ?? "")} fallbackLimit={limit || String(bundles[0]?.purchase_limit ?? "")} />}
+    {showProductExport && exportFormat === "bundle" && (selectedCount > 0 || (sourceMode === "sheet" && loadingSheet && sheetTabs.length > 0)) && requestType !== "ITEM_CODE" && <ProductExportPanel sourceKey={productSourceKey} requestId={requestId} productName={bundleNameBase || exportName || bundleName} bundles={bundles} selectedIndexes={locked} fallbackPrice={sourceMode === "manual" ? price : String(bundles[0]?.seed_point ?? "")} fallbackLimit={sourceMode === "manual" ? limit : String(bundles[0]?.purchase_limit ?? "")} />}
     {showProductExport && exportFormat === "starlight" && selectedCount > 0 && requestType !== "ITEM_CODE" && <StarlightProductExportPanel bundles={includedBundles} />}
     {bundles.length > 0 && <section className="adapter-validation"><div className="section-heading"><div><p className="eyebrow">Step 3</p><h2>ตรวจ Item ก่อน Export</h2></div><p>เทียบกับ Data กลางเพื่อลด Item ID หรือชื่อที่ไม่ตรง</p></div><ItemCatalogCheck bundles={bundles} onCatalogChange={setCatalog} /></section>}
   </main>;
