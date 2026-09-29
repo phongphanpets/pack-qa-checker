@@ -31,7 +31,7 @@ function applyBundleNames(result: ExcelPasteResult, names: Record<number, string
   const bundles = result.bundles.map((bundle, index) => ({
     ...bundle,
     name: names[index]?.trim() || (base
-      ? format === "starlight" ? `${base} ${bundle.items[0]?.name?.trim() || bundle.name}` : `${base} #${index + 1}`
+      ? format === "starlight" ? `${base} ${bundle.items[0]?.name?.trim() || bundle.name}` : result.sourceFormat === "itemcode-grid" ? `${base} - ${(bundle.name || "").replace(/^Itemcode\s+/, "")}` : `${base} #${index + 1}`
       : bundle.name === "Untitled Bundle" ? `Bundle #${index + 1}` : bundle.name),
   }));
   return {
@@ -382,7 +382,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
         </>}
       </aside>
     </section>
-    {showProductExport && exportFormat === "bundle" && (selectedCount > 0 || (sourceMode === "sheet" && loadingSheet && sheetTabs.length > 0)) && requestType !== "ITEM_CODE" && <ProductExportPanel sourceKey={productSourceKey} requestId={requestId} productName={bundleNameBase || exportName || bundleName} bundles={bundles} selectedIndexes={locked} fallbackPrice={sourceMode === "manual" ? price : String(bundles[0]?.seed_point ?? "")} fallbackLimit={sourceMode === "manual" ? limit : String(bundles[0]?.purchase_limit ?? "")} />}
+    {showProductExport && exportFormat === "bundle" && (selectedCount > 0 || (sourceMode === "sheet" && loadingSheet && sheetTabs.length > 0)) && requestType !== "ITEM_CODE" && sourceResult?.sourceFormat !== "itemcode-grid" && <ProductExportPanel sourceKey={productSourceKey} requestId={requestId} productName={bundleNameBase || exportName || bundleName} bundles={bundles} selectedIndexes={locked} fallbackPrice={sourceMode === "manual" ? price : String(bundles[0]?.seed_point ?? "")} fallbackLimit={sourceMode === "manual" ? limit : String(bundles[0]?.purchase_limit ?? "")} />}
     {showProductExport && exportFormat === "starlight" && selectedCount > 0 && requestType !== "ITEM_CODE" && <StarlightProductExportPanel bundles={includedBundles} />}
     {bundles.length > 0 && <section className="adapter-validation"><div className="section-heading"><div><p className="eyebrow">Step 3</p><h2>ตรวจ Item ก่อน Export</h2></div><p>เทียบกับ Data กลางเพื่อลด Item ID หรือชื่อที่ไม่ตรง</p></div><ItemCatalogCheck bundles={bundles} onCatalogChange={setCatalog} /></section>}
   </main>;

@@ -7,6 +7,7 @@ export type ExcelPasteWarning = {
 };
 
 export type ExcelPasteResult = {
+  sourceFormat?: "itemcode-grid";
   document: PackFormDocument;
   bundles: SpecBundle[];
   valid: boolean;
@@ -61,6 +62,8 @@ type ParsedItem = {
 export function parseExcelPaste(input: string): ExcelPasteResult {
   const rows = table(input);
   if (isStarlightShopHeader(rows)) return parseStarlightShopRows(rows, input);
+  const itemCodeGrid = parseItemCodeGrid(rows, input);
+  if (itemCodeGrid) return itemCodeGrid;
   const ambiguous = rows.some((row) =>
     row.filter((cell) => itemIdHeaders.map(normalize).includes(normalize(cell.value))).length > 1 ||
     row.filter((cell) => amountHeaders.map(normalize).includes(normalize(cell.value))).length > 1 ||
@@ -96,6 +99,81 @@ export function parseExcelPaste(input: string): ExcelPasteResult {
     valid: sections.length > 0 && sections.every((section) => section.valid),
     warnings: sections.flatMap((section) => section.warnings),
     summary: primary.summary,
+  };
+}
+
+function parseItemCodeGrid(rows: Cell[][], originalInput: string): ExcelPasteResult | null {
+  const dateRows = rows.flatMap((row, index) => {
+    const starts = row.flatMap((cell, column) =>
+      normalize(cell.value) === "live date" && clean(row[column + 1]?.value)
+        ? [{ column, date: clean(row[column + 1].value) }]
+        : []);
+    return starts.length ? [{ index, starts }] : [];
+  });
+  if (!dateRows.some(({ starts, index }) => starts.some(({ column }) => rows.slice(index + 1).some((row) =>
+    /^code\s*#\d+$/i.test(clean(row[column]?.value) || "") &&
+    normalize(row[column + 2]?.value || "") === "item id" &&
+    normalize(row[column + 3]?.value || "") === "item name" &&
+    normalize(row[column + 4]?.value || "") === "amt")))) return null;
+
+  const bundles: SpecBundle[] = [];
+  const documentBundles: PackFormDocument["bundles"] = [];
+  const warnings: ExcelPasteWarning[] = [];
+  for (const [dateIndex, dateRow] of dateRows.entries()) {
+    const end = dateRows[dateIndex + 1]?.index ?? rows.length;
+    for (const { column, date } of dateRow.starts) {
+      for (let header = dateRow.index + 1; header < end; header += 1) {
+        const match = clean(rows[header][column]?.value)?.match(/^code\s*#(\d+)$/i);
+        if (!match || normalize(rows[header][column + 2]?.value || "") !== "item id" ||
+            normalize(rows[header][column + 3]?.value || "") !== "item name" ||
+            normalize(rows[header][column + 4]?.value || "") !== "amt") continue;
+        const items: Array<{ id: Cell; name: Cell; amount: Cell; quantity: number }> = [];
+        for (let itemRow = header + 1; itemRow < end; itemRow += 1) {
+          if (/^(?:code\s*#\d+|type|live date)$/i.test(clean(rows[itemRow][column]?.value) || "")) break;
+          const id = rows[itemRow][column + 2];
+          const name = rows[itemRow][column + 3];
+          const amount = rows[itemRow][column + 4];
+          if (![id, name, amount].some((cell) => clean(cell?.value))) continue;
+          const quantity = integer(amount?.value);
+          if (!looksLikeItemId(id?.value) || !looksLikeItemName(name?.value) || quantity === null || quantity <= 0) {
+            warnings.push({ code: "INVALID_ITEM", message: `แถว ${id?.row ?? itemRow + 1}: รายการ Itemcode ${date} #${match[1]} มี Item ID, ชื่อ หรือจำนวนไม่ถูกต้อง` });
+            continue;
+          }
+          items.push({ id, name, amount, quantity });
+        }
+        if (!items.length) continue;
+        const name = `Itemcode ${date} #${match[1]}`;
+        const bundleId = deterministicBundleId(`${originalInput}\nitemcode-grid\n${dateRow.index}:${column}:${match[1]}`);
+        bundles.push({
+          bundle_id: bundleId, name, seed_point: null, gsp_earn: null, purchase_limit: null,
+          is_gacha: false, is_permanent: false,
+          items: items.map((item) => ({ item_id: clean(item.id.value), name: clean(item.name.value), amount: item.quantity, chance: null })),
+        });
+        documentBundles.push({
+          bundle_id: bundleId,
+          spec: {
+            bundle_id: { value: bundleId, source: "spec", confidence: 1, raw_text: "generated from itemcode grid", locator: `excel-paste:R${rows[header][column].row}C${rows[header][column].column}` },
+            name: field(rows[header][column], name),
+            is_gacha: false,
+            items: items.map((item) => ({ item_id: field(item.id, clean(item.id.value)), name: field(item.name, clean(item.name.value)), amount: field(item.amount, item.quantity) })),
+          },
+        });
+      }
+    }
+  }
+  if (!bundles.length) return null;
+  warnings.unshift({ code: "GENERATED_BUNDLE_ID", message: `พบ ${bundles.length} Bundle จากตาราง Itemcode แบบหลายวัน ระบบแยกตาม Live Date และ Code # ให้แล้ว` });
+  const first = bundles[0];
+  return {
+    sourceFormat: "itemcode-grid", document: { bundles: documentBundles }, bundles,
+    valid: !warnings.some((warning) => warning.code === "INVALID_ITEM"), warnings,
+    summary: {
+      bundleId: first.bundle_id, generatedBundleId: true, name: first.name,
+      itemCount: bundles.reduce((total, bundle) => total + bundle.items.length, 0),
+      seedPoint: null, gspEarn: null, playerExp: null, purchaseLimit: null,
+      isGacha: false, isPermanent: false, fixedItemCount: bundles.reduce((total, bundle) => total + bundle.items.length, 0),
+      randomOutcomeCount: 0, chanceTotal: null,
+    },
   };
 }
 
