@@ -118,7 +118,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
   const [exportError, setExportError] = useState("");
   const [exporting, setExporting] = useState(false);
   const [mirrorChance, setMirrorChance] = useState(true);
-  const [splitFiles, setSplitFiles] = useState(true);
+  const [splitFiles, setSplitFiles] = useState(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("bundle");
 
   useEffect(() => {
@@ -371,7 +371,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
           {bundles.length > 1 && <label className="bundle-batch-name"><span>ตั้งชื่อ Bundle ทั้งชุด</span><input aria-label="ตั้งชื่อ Bundle ทั้งชุด" value={bundleNameBase} onChange={(event) => setBundleNameBase(event.target.value)} placeholder={exportFormat === "starlight" ? "เช่น [SLS]" : "เช่น 9.9 เสว : God Coin"} /><small>{exportFormat === "starlight" ? "นำข้อความไปต่อหน้าชื่อไอเทม เช่น [SLS] Legendary Star Costume และแก้ชื่อราย Bundle ด้านล่างได้" : "ระบบจะตั้งชื่อเป็น #1, #2, #3 ตามลำดับ และแก้รายชื่อแต่ละ Bundle ด้านล่างได้"}</small></label>}
           <div className="bundle-preview-list">{bundles.map((bundle, index) => <BundlePreview bundle={bundle} index={index} nameValue={bundleNameOverrides[index] ?? bundle.name} locked={locked.has(index)} onToggle={() => toggleLock(index)} onNameChange={(name) => setBundleNameOverrides((current) => ({ ...current, [index]: name }))} key={index} />)}</div>
           {exportFormat === "bundle" && <label><input type="checkbox" checked={mirrorChance} onChange={event => setMirrorChance(event.target.checked)} /> ใช้ Chance เดียวกันเมื่อไม่มี Secret Chance</label>}
-          <label>รูปแบบไฟล์ <select aria-label="รูปแบบไฟล์ Export" value={splitFiles ? "zip" : "xlsx"} onChange={event => setSplitFiles(event.target.value === "zip")}><option value="zip">แยก Excel ต่อ Bundle รวมเป็น ZIP</option><option value="xlsx">รวมทุก Bundle ใน Excel เดียว</option></select></label>
+          <label>รูปแบบไฟล์ <select aria-label="รูปแบบไฟล์ Export" value={splitFiles ? "zip" : "xlsx"} onChange={event => setSplitFiles(event.target.value === "zip")}><option value="xlsx">รวมทุก Bundle ใน Excel เดียว</option><option value="zip">แยก Excel ต่อ Bundle รวมเป็น ZIP</option></select></label>
           {exportReview.errors.map((message, index) => <p className="hub-error" key={`error-${index}`}>{message}</p>)}
           {exportReview.warnings.map((message, index) => <p className="source-warning" key={`warning-${index}`}>{message}</p>)}
           {bundles.length > 1 && <button type="button" className="quiet-button" disabled={exporting} onClick={() => setLocked(new Set(bundles.map((_, index) => index)))}>ล็อกทั้งหมด</button>}

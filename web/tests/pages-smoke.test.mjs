@@ -66,6 +66,8 @@ test("Pages starts with local Bundle Import and exports without a server", async
     await page.getByRole("button", { name: "กลับไป Bundle Import", exact: true }).click();
     await textarea.fill("1315002\tGod Fellow Ticket\t30");
     await page.getByText("God Fellow Ticket", { exact: true }).first().waitFor();
+    assert.equal(await page.getByLabel("รูปแบบไฟล์ Export").inputValue(), "xlsx");
+    await page.getByLabel("ชื่อ Bundle 1").fill("");
     await page.getByLabel("ชื่อ Bundle 1").pressSequentially("ชื่อพิมพ์ต่อเนื่อง");
     assert.equal(await page.getByLabel("ชื่อ Bundle 1").inputValue(), "ชื่อพิมพ์ต่อเนื่อง");
     const selection = page.locator(".bundle-preview-top input[type=checkbox]").first();
@@ -102,6 +104,7 @@ test("Pages starts with local Bundle Import and exports without a server", async
     let localApiCalls = 0;
     await page.route("**/api/bundle-import", route => { localApiCalls++; return route.abort(); });
     await page.route("**/api/product-import", route => { localApiCalls++; return route.abort(); });
+    await page.getByLabel("รูปแบบไฟล์ Export").selectOption("zip");
     const localDownload = page.waitForEvent("download");
     await page.getByRole("button", { name: /Export Import file/ }).click();
     const zipped = await localDownload;
