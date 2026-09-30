@@ -10,9 +10,9 @@ export function rewardIdentity(value, name = "") {
   const id = String(value ?? "").trim().replace(/\\_/g, "_");
   const normalized = id.toLowerCase().replace(/\s+/g, "_");
   const wallets = {
-    popo_god_1: { type: "WALLET_DEBIT", id: "a15e0918-7fe8-44af-af85-fd8250a1a78a" },
-    popo_fellow_1: { type: "WALLET_DEBIT", id: "a15e08fd-4e26-4256-a1e4-068ef2db9e56" },
-    popo_kupo_1: { type: "WALLET_DEBIT", id: "a15e08db-9f3f-4bd2-a8bf-d4bb451e192d" },
+    popo_god_1: { type: "WALLET_DEBIT", id: "God Coin" },
+    popo_fellow_1: { type: "WALLET_DEBIT", id: "Fellow Coin" },
+    popo_kupo_1: { type: "WALLET_DEBIT", id: "Kupole Coin" },
   };
   const walletAliases = {
     "god_coin": "popo_god_1",

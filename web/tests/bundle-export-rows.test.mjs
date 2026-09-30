@@ -41,15 +41,15 @@ test("currency mapping requires identity and wrong totals remain unchanged", () 
   assert.equal(rewardIdentity("Gold_Cur").id, "101147");
   assert.deepEqual(rewardIdentity("Popo_God_1"), {
     type: "WALLET_DEBIT",
-    id: "a15e0918-7fe8-44af-af85-fd8250a1a78a",
+    id: "God Coin",
   });
   assert.deepEqual(rewardIdentity("Popo_Fellow_1"), {
     type: "WALLET_DEBIT",
-    id: "a15e08fd-4e26-4256-a1e4-068ef2db9e56",
+    id: "Fellow Coin",
   });
   assert.deepEqual(rewardIdentity("Popo_Kupo_1"), {
     type: "WALLET_DEBIT",
-    id: "a15e08db-9f3f-4bd2-a8bf-d4bb451e192d",
+    id: "Kupole Coin",
   });
   assert.throws(() => rewardIdentity("Currency", "Unknown"));
   const result = prepareBundleRows([{ name: "Random", is_gacha: true, items: [{ item_id: "51201", amount: 1, chance: 99 }] }]);
@@ -57,16 +57,20 @@ test("currency mapping requires identity and wrong totals remain unchanged", () 
   assert.equal(result.warnings.length, 1);
 });
 
-test("wallet coin aliases export as debit without changing their IDs", () => {
+test("wallet coin aliases export as debit with canonical names", () => {
   const aliases = [
-    ["God Coin", "God Coin 1", "a15e0918-7fe8-44af-af85-fd8250a1a78a"],
-    ["Fellow Coin", "Fellow Coin 1", "a15e08fd-4e26-4256-a1e4-068ef2db9e56"],
-    ["Kupole Coin", "Kupole Coin 1", "a15e08db-9f3f-4bd2-a8bf-d4bb451e192d"],
+    ["God Coin", "God Coin 1"],
+    ["Fellow Coin", "Fellow Coin 1"],
+    ["Kupole Coin", "Kupole Coin 1"],
   ];
-  for (const [coin, label, id] of aliases) {
-    assert.deepEqual(rewardIdentity(coin, label), { type: "WALLET_DEBIT", id });
-    assert.deepEqual(rewardIdentity("Currency", coin), { type: "WALLET_DEBIT", id });
+  for (const [coin, label] of aliases) {
+    assert.deepEqual(rewardIdentity(coin, label), { type: "WALLET_DEBIT", id: coin });
+    assert.deepEqual(rewardIdentity(label), { type: "WALLET_DEBIT", id: coin });
+    assert.deepEqual(rewardIdentity("Currency", coin), { type: "WALLET_DEBIT", id: coin });
   }
+  const result = prepareBundleRows([{ name: "Coins", items: aliases.map(([coin, label]) => ({ item_id: `Popo_${coin === "Kupole Coin" ? "Kupo" : coin.split(" ")[0]}_1`, name: label, amount: 1 })) }]);
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.rows.map(row => row.slice(2, 5)), aliases.map(([coin]) => ["WALLET_DEBIT", coin, 1]));
 });
 
 test("existing GSP and Player EXP identities remain unchanged", () => {
