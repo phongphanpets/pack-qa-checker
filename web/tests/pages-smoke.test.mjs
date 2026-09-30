@@ -27,6 +27,8 @@ test("Pages starts with local Bundle Import and exports without a server", async
     page.on("pageerror", e => errors.push(e.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/pack-qa-checker/`);
     await page.getByText("แปลงตารางเป็น Bundle พร้อม Import", { exact: true }).waitFor();
+    assert.match(await page.locator(".source-options > button").nth(1).innerText(), /^Google Sheet/);
+    assert.match(await page.locator(".source-options > button").nth(2).innerText(), /^กรอกข้อมูลเอง/);
     assert.equal(await page.getByText("เซิร์ฟเวอร์ Request และ History", { exact: true }).count(), 0);
     const textarea = page.locator("textarea").first();
     await page.getByRole("button", { name: "สร้าง Product เอง", exact: true }).click();

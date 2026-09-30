@@ -354,8 +354,8 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
       <label className="format-picker"><span>รูปแบบ Import</span><select aria-label="รูปแบบ Import" value={exportFormat} onChange={(event) => { setExportFormat(event.target.value as ExportFormat); setLockState({ signature: "", indexes: new Set() }); }}><option value="bundle">Bundle Import เดิม</option><option value="starlight">Starlight Shop</option></select><small>Starlight Shop แยก 1 Bundle ต่อแถว พร้อมสร้าง Product จาก Battery และ Limit</small></label>
       <div className="source-options">
         <SourceOption active={sourceMode === "paste"} title="วางตาราง" detail="รองรับข้อมูลที่ก๊อบจาก Excel หรือ Google Sheet" onClick={() => setSourceMode("paste")} />
-        <SourceOption active={false} title="กรอกข้อมูลเอง" detail="กำลังปรับรูปแบบข้อมูลให้ใช้งานได้ครบ" onClick={() => undefined} wip />
         <SourceOption active={sourceMode === "sheet"} title="Google Sheet" detail="วางลิงก์แล้วเลือกแท็บ" onClick={() => { setSourceMode("sheet"); setLockState({ signature: "", indexes: new Set() }); }} />
+        <SourceOption active={false} title="กรอกข้อมูลเอง" detail="กำลังปรับรูปแบบข้อมูลให้ใช้งานได้ครบ" onClick={() => undefined} wip />
       </div>
     </section>
     <section className="adapter-layout">
