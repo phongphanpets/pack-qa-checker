@@ -53,3 +53,33 @@ test("prepares Starlight Shop rows with the requested columns", () => {
   assert.deepEqual(review.rows[3], ["Silver Box 100,000", "FIXED", "ITEM", "1311331", 1, "Trainee", 1, null, null]);
   assert.deepEqual(review.warnings, []);
 });
+
+test("explicit Starlight mode accepts headerless eight-column TSV without losing the first item", () => {
+  const parsed = parseStarlightShopPaste(source.split("\n").slice(1).join("\n"));
+  assert.equal(parsed.valid, true);
+  assert.deepEqual(parsed.bundles.map(b => [b.name, b.items[0].battery, b.items[0].amount, b.items[0].limit]),
+    parseStarlightShopPaste(source).bundles.map(b => [b.name, b.items[0].battery, b.items[0].amount, b.items[0].limit]));
+  assert.deepEqual(prepareStarlightRows(parsed.bundles).errors, []);
+});
+
+test("explicit Starlight mode accepts headerless six-column Markdown", () => {
+  const parsed = parseStarlightShopPaste(`| 5 | | 4224500 | Card Fragment | FALSE | 100 |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 1 | | 1311331 | Silver Box 100,000 | FALSE | 1 |`);
+  assert.equal(parsed.valid, true);
+  assert.deepEqual(parsed.bundles.map(b => [b.items[0].battery, b.items[0].amount]), [[5, 100], [1, 1]]);
+});
+
+test("Starlight accepts a blank Battery heading in the known layout", () => {
+  assert.equal(parseStarlightShopPaste(source.replace(/^Battery/, "")).bundles.length, 4);
+});
+
+test("headerless inference does not hide invalid following rows or reinterpret ordinary items", () => {
+  const parsed = parseStarlightShopPaste("5\t\t4224500\tCard Fragment\tFALSE\t100\ninvalid\t\t1311331\tSilver Box\tFALSE\t1");
+  assert.equal(parsed.valid, false);
+  assert.ok(parsed.warnings.some(w => w.code === "INVALID_ITEM"));
+  assert.equal(parseStarlightShopPaste("4224500\tCard Fragment\t100").valid, false);
+  const ordinary = parseExcelPaste("4224500\tCard Fragment\t100\n1311331\tSilver Box\t1");
+  assert.equal(ordinary.bundles.length, 1);
+  assert.equal(ordinary.bundles[0].items.length, 2);
+});

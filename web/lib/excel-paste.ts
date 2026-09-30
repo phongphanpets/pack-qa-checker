@@ -186,6 +186,27 @@ function parseItemCodeGrid(rows: Cell[][], originalInput: string): ExcelPasteRes
  */
 export function parseStarlightShopPaste(input: string): ExcelPasteResult {
   const rows = table(input);
+  if (!isStarlightShopHeader(rows)) {
+    // Positional inference is restricted to the explicitly selected Starlight mode.
+    const partialHeader = rows.findIndex((row) =>
+      findColumn(row, itemIdHeaders) === 2 &&
+      findColumn(row, itemNameHeaders) === 3 &&
+      findColumn(row, amountHeaders) === 5 && !clean(row[0]?.value));
+    if (partialHeader >= 0) {
+      rows[partialHeader][0] = { ...rows[partialHeader][0], value: "Battery" };
+    } else {
+      const firstData = rows.findIndex((row) => row.some((cell) => clean(cell.value)) &&
+        !row.every((cell) => !clean(cell.value) || /^(?:starligh?t\s*shop|battery)$/i.test(clean(cell.value))));
+      const first = rows[firstData];
+      if (first && (first.length === 6 || first.length === 8) &&
+        decimal(first[0]?.value) !== null && looksLikeItemId(first[2]?.value) &&
+        looksLikeItemName(first[3]?.value) && integer(first[5]?.value) !== null) {
+        const labels = ["Battery", "Image", "Item ID", "Item Name", "Stackable", "Amt", "Trade", "Limit"];
+        const header = labels.slice(0, first.length).map((value, column) => ({ value, row: 0, column }));
+        return parseStarlightShopRows([header, ...rows.slice(firstData)], input);
+      }
+    }
+  }
   return parseStarlightShopRows(rows, input);
 }
 
