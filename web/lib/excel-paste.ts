@@ -7,7 +7,7 @@ export type ExcelPasteWarning = {
 };
 
 export type ExcelPasteResult = {
-  sourceFormat?: "itemcode-grid";
+  sourceFormat?: "itemcode-grid" | "single-item";
   document: PackFormDocument;
   bundles: SpecBundle[];
   valid: boolean;
@@ -99,6 +99,51 @@ export function parseExcelPaste(input: string): ExcelPasteResult {
     valid: sections.length > 0 && sections.every((section) => section.valid),
     warnings: sections.flatMap((section) => section.warnings),
     summary: primary.summary,
+  };
+}
+
+export function splitIntoSingleItemBundles(result: ExcelPasteResult, input: string): ExcelPasteResult {
+  if (!result.bundles.length || !result.valid) return result;
+  if (result.bundles.some((bundle) => bundle.is_gacha || bundle.items.some((item) => item.chance != null))) {
+    return {
+      ...result,
+      valid: false,
+      warnings: [...result.warnings, { code: "UNSUPPORTED_LAYOUT", message: "โหมด 1 รายการต่อ Bundle รองรับเฉพาะรายการ Fixed ที่ไม่มี Chance" }],
+    };
+  }
+
+  const bundles: SpecBundle[] = [];
+  const documentBundles: PackFormDocument["bundles"] = [];
+  result.bundles.forEach((bundle, bundleIndex) => {
+    const original = result.document.bundles[bundleIndex];
+    const spec = original?.spec as Record<string, unknown> | undefined;
+    const documentItems = spec?.items as unknown[] | undefined;
+    bundle.items.forEach((item, itemIndex) => {
+      const bundleId = deterministicBundleId(`${input}\nsingle-item:${bundleIndex}:${itemIndex}`);
+      const name = item.name?.trim() || `Bundle #${bundles.length + 1}`;
+      bundles.push({ ...bundle, bundle_id: bundleId, name, items: [item] });
+      documentBundles.push({
+        ...original,
+        bundle_id: bundleId,
+        spec: {
+          ...spec,
+          bundle_id: field(null, bundleId),
+          name: field(null, name),
+          items: documentItems?.[itemIndex] ? [documentItems[itemIndex]] : [],
+        },
+      });
+    });
+  });
+
+  return {
+    ...result,
+    sourceFormat: "single-item",
+    document: { bundles: documentBundles },
+    bundles,
+    warnings: result.warnings.map((warning) => warning.code === "GENERATED_BUNDLE_ID"
+      ? { ...warning, message: `แยก ${bundles.length} Fixed Bundle จากแต่ละรายการแล้ว ตั้งชื่อเริ่มต้นตาม Item Name และแก้ได้ก่อน Export` }
+      : warning),
+    summary: { ...result.summary, bundleId: bundles[0].bundle_id, name: bundles[0].name, fixedItemCount: bundles.length },
   };
 }
 

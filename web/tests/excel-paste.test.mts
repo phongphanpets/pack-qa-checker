@@ -5,7 +5,9 @@ import {
   attachAdminPaste,
   parseAdminPaste,
   parseExcelPaste,
+  splitIntoSingleItemBundles,
 } from "../lib/excel-paste.ts";
+import { prepareBundleRows } from "../lib/bundle-export-rows.mjs";
 import { adminCropRegions, parseAdminOcrDates } from "../lib/admin-ocr.ts";
 
 const copiedExcelBlock = `🔥FLASH SALE\tProduct Name\tSat เสว : Smooth like butter\tStart\t25 Jul\t00.01 น.\tReset\tNo Reset\tLimit (ครั้ง / ID)\tTotal Paid\tลดกี่ %
@@ -54,6 +56,48 @@ Popo_God_1\tGod Coin 1\t3`);
   assert.equal(result.valid, true);
   assert.equal(result.bundles.length, 1);
   assert.equal(result.summary.itemCount, 3);
+});
+
+test("splits a pasted item list into one fixed Bundle per row without changing Amt", () => {
+  const input = `Item ID\tItem Name\tAmt
+1112001\tHP Regen\t5
+1112002\tSP Regen\t5
+1311331\tSilver Box 100,000\t5
+4413210\tZone Quest Scroll\t10
+1112004\tGoddess Blessed Potion\t5
+1211001\tMysterious Dish\t5
+1002000\tFellow Stamina Token (3 Days)\t1
+1311106\tMaterial Jar : Epic\t5
+1315001\tFellow Ticket\t2
+1315011\tKupole Ticket\t2
+1314321\tMercenary Trainee Certificate Ticket : Unique\t2
+10003\tMysterious Gift Box : Rare\t2
+1211021\tMysterious Farm Material Box\t5
+4224500\tCard Fragment\t10
+1315002\tGod Fellow Ticket\t2`;
+  const normal = parseExcelPaste(input);
+  const split = splitIntoSingleItemBundles(normal, input);
+  const exportReview = prepareBundleRows(split.bundles);
+
+  assert.equal(normal.bundles.length, 1);
+  assert.equal(split.valid, true);
+  assert.equal(split.bundles.length, 15);
+  assert.equal(split.document.bundles.length, 15);
+  assert.ok(split.bundles.every((bundle) => bundle.items.length === 1 && !bundle.is_gacha));
+  assert.equal(new Set(split.bundles.map((bundle) => bundle.bundle_id)).size, 15);
+  assert.deepEqual(split.bundles.map((bundle) => bundle.items[0].amount), [5, 5, 5, 10, 5, 5, 1, 5, 2, 2, 2, 2, 5, 10, 2]);
+  assert.deepEqual(exportReview.errors, []);
+  assert.equal(exportReview.rows.length, 15);
+  assert.ok(exportReview.rows.every((row) => row[1] === "FIXED" && row[6] === 1));
+  assert.deepEqual(exportReview.rows[14].slice(0, 5), ["God Fellow Ticket", "FIXED", "ITEM", "1315002", 2]);
+});
+
+test("single-item mode refuses random outcomes instead of dropping their rates", () => {
+  const input = `Item ID\tItem Name\tAmt\tChance
+1112001\tHP Regen\t5\t100`;
+  const result = splitIntoSingleItemBundles(parseExcelPaste(input), input);
+  assert.equal(result.valid, false);
+  assert.match(result.warnings.at(-1)?.message || "", /Fixed/);
 });
 
 test("keeps missing year and generated identity visible as warnings", () => {

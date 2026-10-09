@@ -11,14 +11,14 @@ import ItemCatalogCheck from "@/components/ItemCatalogCheck";
 import ProductExportPanel from "@/components/ProductExportPanel";
 import StarlightProductExportPanel from "@/components/StarlightProductExportPanel";
 import RequestHub from "@/components/RequestHub";
-import { parseExcelPaste, parseStarlightShopPaste, type ExcelPasteResult } from "@/lib/excel-paste";
+import { parseExcelPaste, parseStarlightShopPaste, splitIntoSingleItemBundles, type ExcelPasteResult } from "@/lib/excel-paste";
 import { prepareStarlightRows } from "@/lib/starlight-shop.mjs";
 import type { CatalogItem } from "@/lib/item-catalog";
 import { configuredGoogleClientId, ensureGoogleSheetAccess, listGoogleSheetTabs, preferredGoogleSheetTabName, preloadGoogleIdentity, readGoogleSheetTab, type GoogleSpreadsheetTab } from "@/lib/google-sheet-browser";
 import type { SpecBundle } from "@/lib/website-ocr";
 
 type SourceMode = "paste" | "manual" | "sheet";
-type ExportFormat = "bundle" | "starlight";
+type ExportFormat = "bundle" | "single-item" | "starlight";
 type StarlightReview = { rows: Array<Array<string | number | null>>; errors: string[]; warnings: string[] };
 const prepareStarlightRowsTyped = prepareStarlightRows as unknown as (bundles: SpecBundle[], options: { catalog: CatalogItem[] }) => StarlightReview;
 type ManualItem = { key: number; itemId: string; name: string; amount: string; tier: string; chance: string };
@@ -132,13 +132,13 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
     window.localStorage.setItem("google-sheet-client-id", value);
   }
 
-  const rawParsedPaste = useMemo<ExcelPasteResult>(() => exportFormat === "starlight" ? parseStarlightShopPaste(pasteValue) : parseExcelPaste(pasteValue), [pasteValue, exportFormat]);
+  const rawParsedPaste = useMemo<ExcelPasteResult>(() => exportFormat === "starlight" ? parseStarlightShopPaste(pasteValue) : exportFormat === "single-item" ? splitIntoSingleItemBundles(parseExcelPaste(pasteValue), pasteValue) : parseExcelPaste(pasteValue), [pasteValue, exportFormat]);
   const parsedPaste = useMemo<ExcelPasteResult>(() => applyBundleNames(rawParsedPaste, bundleNameOverrides, bundleNameBase, exportFormat), [rawParsedPaste, bundleNameOverrides, bundleNameBase, exportFormat]);
   const selectedSheetText = sheetTabs.find((tab) => tab.name === selectedSheetTab)?.text || "";
   const productSourceKey = sourceMode === "sheet"
     ? JSON.stringify([sourceMode, sheetUrl, selectedSheetTab, selectedSheetText])
     : sourceMode === "paste" ? JSON.stringify([sourceMode, pasteValue]) : sourceMode;
-  const rawParsedSheet = useMemo<ExcelPasteResult>(() => exportFormat === "starlight" ? parseStarlightShopPaste(selectedSheetText) : parseExcelPaste(selectedSheetText), [selectedSheetText, exportFormat]);
+  const rawParsedSheet = useMemo<ExcelPasteResult>(() => exportFormat === "starlight" ? parseStarlightShopPaste(selectedSheetText) : exportFormat === "single-item" ? splitIntoSingleItemBundles(parseExcelPaste(selectedSheetText), selectedSheetText) : parseExcelPaste(selectedSheetText), [selectedSheetText, exportFormat]);
   const parsedSheet = useMemo<ExcelPasteResult>(() => applyBundleNames(rawParsedSheet, bundleNameOverrides, bundleNameBase, exportFormat), [rawParsedSheet, bundleNameOverrides, bundleNameBase, exportFormat]);
   const manual = useMemo(() => manualBundles(bundleName, price, limit, items), [bundleName, price, limit, items]);
   const sourceResult = sourceMode === "paste" ? parsedPaste : sourceMode === "manual" ? null : parsedSheet;
@@ -319,7 +319,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
     const response = await apiFetch("/api/bundle-import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bundles: included, catalog, requestId, filename, mirrorChance, splitFiles, format: exportFormat }),
+      body: JSON.stringify({ bundles: included, catalog, requestId, filename, mirrorChance, splitFiles, format: exportFormat === "starlight" ? "starlight" : "bundle" }),
     });
     if (!response.ok) { const error = await response.json(); throw new Error(error.error || "สร้างไฟล์จาก Bundle Import Template ไม่สำเร็จ"); }
     blob = await response.blob();
@@ -351,7 +351,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
     {requestType === "ITEM_CODE" && itemCodeDetails && <ItemCodeContext details={itemCodeDetails} />}
     <section className="source-panel">
       <div className="section-heading"><div><p className="eyebrow">Step 1</p><h2>เลือกแหล่งข้อมูล</h2></div><p>เลือกเพียงหนึ่งแบบก่อน ระบบจะเปิดช่องที่เกี่ยวข้องให้</p></div>
-      <label className="format-picker"><span>รูปแบบ Import</span><select aria-label="รูปแบบ Import" value={exportFormat} onChange={(event) => { setExportFormat(event.target.value as ExportFormat); setLockState({ signature: "", indexes: new Set() }); }}><option value="bundle">Bundle Import เดิม</option><option value="starlight">Starlight Shop</option></select><small>Starlight Shop แยก 1 Bundle ต่อแถว พร้อมสร้าง Product จาก Battery และ Limit</small></label>
+      <label className="format-picker"><span>รูปแบบ Import</span><select aria-label="รูปแบบ Import" value={exportFormat} onChange={(event) => { setExportFormat(event.target.value as ExportFormat); setBundleNameOverrides({}); setLockState({ signature: "", indexes: new Set() }); }}><option value="bundle">Bundle Import เดิม</option><option value="single-item">1 รายการต่อ 1 Bundle</option><option value="starlight">Starlight Shop</option></select><small>{exportFormat === "single-item" ? "วาง Item ID, Item Name, Amt แล้วแยกแต่ละแถวเป็น Fixed Bundle โดยคงจำนวนเดิม" : "Starlight Shop แยก 1 Bundle ต่อแถว พร้อมสร้าง Product จาก Battery และ Limit"}</small></label>
       <div className="source-options">
         <SourceOption active={sourceMode === "paste"} title="วางตาราง" detail="รองรับข้อมูลที่ก๊อบจาก Excel หรือ Google Sheet" onClick={() => setSourceMode("paste")} />
         <SourceOption active={sourceMode === "sheet"} title="Google Sheet" detail="วางลิงก์แล้วเลือกแท็บ" onClick={() => { setSourceMode("sheet"); setLockState({ signature: "", indexes: new Set() }); }} />
@@ -367,8 +367,8 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
         <div className="preview-heading"><div><p className="eyebrow">Step 2</p><h2>รายการก่อนล็อก</h2></div></div>
         {!bundles.length ? <EmptyPreview mode={sourceMode} /> : <>
           <div className="preview-summary"><span>{selectedCount} รายการพร้อมส่งต่อ</span><span>{bundles.filter((bundle) => bundle.is_gacha).length} Random</span></div>
-          <p className="bundle-name-note">หากยังไม่ตั้งชื่อ ระบบจะใช้ <b>Bundle #1, Bundle #2</b> ตามลำดับ สามารถแก้ชื่อแต่ละรายการได้ก่อน Export</p>
-          {bundles.length > 1 && <label className="bundle-batch-name"><span>ตั้งชื่อ Bundle ทั้งชุด</span><input aria-label="ตั้งชื่อ Bundle ทั้งชุด" value={bundleNameBase} onChange={(event) => setBundleNameBase(event.target.value)} placeholder={exportFormat === "starlight" ? "เช่น [SLS]" : "เช่น 9.9 เสว : God Coin"} /><small>{exportFormat === "starlight" ? "นำข้อความไปต่อหน้าชื่อไอเทม เช่น [SLS] Legendary Star Costume และแก้ชื่อราย Bundle ด้านล่างได้" : "ระบบจะตั้งชื่อเป็น #1, #2, #3 ตามลำดับ และแก้รายชื่อแต่ละ Bundle ด้านล่างได้"}</small></label>}
+          <p className="bundle-name-note">{exportFormat === "single-item" ? "ระบบใช้ Item Name เป็นชื่อเริ่มต้นของแต่ละ Bundle และแก้ชื่อได้ก่อน Export" : <>หากยังไม่ตั้งชื่อ ระบบจะใช้ <b>Bundle #1, Bundle #2</b> ตามลำดับ สามารถแก้ชื่อแต่ละรายการได้ก่อน Export</>}</p>
+          {bundles.length > 1 && <label className="bundle-batch-name"><span>ตั้งชื่อ Bundle ทั้งชุด</span><input aria-label="ตั้งชื่อ Bundle ทั้งชุด" value={bundleNameBase} onChange={(event) => setBundleNameBase(event.target.value)} placeholder={exportFormat === "starlight" ? "เช่น [SLS]" : "เช่น 9.9 เสว : God Coin"} /><small>{exportFormat === "starlight" ? "นำข้อความไปต่อหน้าชื่อไอเทม เช่น [SLS] Legendary Star Costume และแก้ชื่อราย Bundle ด้านล่างได้" : exportFormat === "single-item" ? "ถ้ากรอกชื่อชุด ระบบจะต่อท้าย #1, #2, #3; ถ้าเว้นว่างจะใช้ Item Name" : "ระบบจะตั้งชื่อเป็น #1, #2, #3 ตามลำดับ และแก้รายชื่อแต่ละ Bundle ด้านล่างได้"}</small></label>}
           <div className="bundle-preview-list">{bundles.map((bundle, index) => <BundlePreview bundle={bundle} index={index} nameValue={bundleNameOverrides[index] ?? bundle.name} locked={locked.has(index)} onToggle={() => toggleLock(index)} onNameChange={(name) => setBundleNameOverrides((current) => ({ ...current, [index]: name }))} key={index} />)}</div>
           {exportFormat === "bundle" && <label><input type="checkbox" checked={mirrorChance} onChange={event => setMirrorChance(event.target.checked)} /> ใช้ Chance เดียวกันเมื่อไม่มี Secret Chance</label>}
           <label>รูปแบบไฟล์ <select aria-label="รูปแบบไฟล์ Export" value={splitFiles ? "zip" : "xlsx"} onChange={event => setSplitFiles(event.target.value === "zip")}><option value="xlsx">รวมทุก Bundle ใน Excel เดียว</option><option value="zip">แยก Excel ต่อ Bundle รวมเป็น ZIP</option></select></label>
@@ -378,7 +378,7 @@ export default function ImportAdapterWorkspace({ initialScreen = "hub", showProd
           <button type="button" className="primary-button" disabled={exporting || exportReview.errors.length > 0} onClick={() => void downloadImport()}>{exporting ? "กำลังสร้างไฟล์..." : exportFormat === "starlight" ? `Export Starlight Shop (${selectedCount})` : `Export Import file (${selectedCount})`}</button>
           {!requestId && <p className="hint">Export ในเบราว์เซอร์นี้ · ไม่ต้องเชื่อม Server หรือบันทึก History</p>}
           {exportError && <p className="hub-error" role="alert">{exportError}</p>}
-          <p className="hint">{exportFormat === "starlight" ? "ส่งออกตาม Bundle Import Template: 1 Item ต่อ 1 Fixed Bundle · ข้าม Stackable · ตั้งค่า Product จาก Battery และ Limit ได้ด้านล่าง" : "สร้าง Excel ตาม Bundle Import format พร้อม Fixed, Random, Coin, GSP และ Player EXP"}</p>
+          <p className="hint">{exportFormat === "starlight" ? "ส่งออกตาม Bundle Import Template: 1 Item ต่อ 1 Fixed Bundle · ข้าม Stackable · ตั้งค่า Product จาก Battery และ Limit ได้ด้านล่าง" : exportFormat === "single-item" ? "สร้าง Fixed Bundle แยกตามรายการ โดยเก็บ Amt ตามต้นฉบับ" : "สร้าง Excel ตาม Bundle Import format พร้อม Fixed, Random, Coin, GSP และ Player EXP"}</p>
         </>}
       </aside>
     </section>
