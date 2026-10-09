@@ -136,6 +136,11 @@ test("Pages starts with local Bundle Import and exports without a server", async
     await page.screenshot({ path: "../outputs/pages-review/desktop.png", fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: "../outputs/pages-review/mobile.png", fullPage: true });
+    await page.getByLabel("รูปแบบ Import").selectOption("single-item");
+    await textarea.fill("Item ID\tItem Name\tAmt\n1112001\tHP Regen\t5\n1112002\tSP Regen\t5");
+    await page.getByLabel("ตั้งชื่อ Bundle ทั้งชุด").fill("[Elite OCT]");
+    assert.equal(await page.getByLabel("ชื่อ Bundle 1").inputValue(), "[Elite OCT] HP Regen");
+    assert.equal(await page.getByLabel("ชื่อ Bundle 2").inputValue(), "[Elite OCT] SP Regen");
     const request = { id: "SMOKE1", title: "Saved request", request_type: "ITEM_CODE", status: "REVIEW", updated_at: "2026-09-08T00:00:00Z", source_text: "1315002\tGod Fellow Ticket\t30", payload: {} };
     const shop = { ...request, id: "SHOP2", title: "Shop request", request_type: "WEB_SHOP", status: "NEW", notification_status: "FAILED" };
     await page.route("**/api/requests", route => route.fulfill({ json: { requests: [request, shop] } }));
